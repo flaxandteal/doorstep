@@ -63,7 +63,7 @@ class TabularReport(Report):
                 if row:
                     context_location = dict(location)
                     context_location['column'] = None
-                    context = [ReportItem('Row', context_location, None, row)]
+                    context = [ReportItem('Row', context_location, row, None)]
             else:
                 typ = 'Row'
                 properties = row
@@ -77,6 +77,6 @@ class TabularReport(Report):
             else:
                 typ = 'Global'
 
-        item = ReportItem(typ, location, None, properties)
+        item = ReportItem(typ, location, properties, None)
 
         super(TabularReport, self).add_issue(log_level, code, message, item, error_data=error_data, context=context, at_top=at_top)
