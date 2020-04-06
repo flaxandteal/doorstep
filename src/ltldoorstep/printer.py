@@ -73,7 +73,10 @@ class TermColorPrinter(Printer):
         general_output = []
         results = []
 
-        report = Report.parse(result_sets)
+        if isinstance(result_sets, Report):
+            report = result_sets
+        else:
+            report = Report.parse(result_sets)
         # logging.warn("Report ***** %s " % report)
 
         for log_level in LEVEL_MAPPING:
@@ -164,7 +167,10 @@ class HtmlPrinter(Printer):
         general_output = []
         results = []
 
-        report = Report.parse(result_sets)
+        if isinstance(result_sets, Report):
+            report = result_sets
+        else:
+            report = Report.parse(result_sets)
 
         for log_level in LEVEL_MAPPING:
             for issue in report.get_issues(log_level):
