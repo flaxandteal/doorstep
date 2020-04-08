@@ -19,6 +19,7 @@ from .ini import DoorstepIni
 from .errors import LintolDoorstepException
 
 RECONNECT_DELAY = 6
+TIMEOUT_TO_JOIN = 20
 
 class SessionSet(OrderedDict):
     def __init__(self, engine):
@@ -121,7 +122,7 @@ class ReportResource():
         return result_string
 
 class DoorstepComponent(ApplicationSession):
-    def __init__(self, engine, sessions, config, debug, *args, **kwargs):
+    def __init__(self, engine, sessions, config, debug, join_timeout, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self._id = 'ltlwc-%s' % str(uuid.uuid4())
@@ -133,6 +134,8 @@ class DoorstepComponent(ApplicationSession):
         self._resource_processor = ProcessorResource(self._engine, self._config)
         self._resource_data = DataResource(self._engine, self._config)
         self._resource_report = ReportResource(self._engine, self._config)
+
+        self._join_timeout = join_timeout
 
     def get_session(self, name):
         return self._sessions[name]
@@ -158,6 +161,7 @@ class DoorstepComponent(ApplicationSession):
 
     async def onJoin(self, details):
         print("Joining")
+        self._join_timeout.set_result(True)
         async def get_session_pair():
             session = self.make_session()
             print(_("Engaging for session %s") % session['name'])
@@ -227,11 +231,23 @@ def launch_wamp_real(engine, router='localhost:8080', config={}, debug=False):
                 runner.transport_factory.loop = loop
 
             print("Start running")
-            coro = runner.run(
-                lambda *args, **kwargs: DoorstepComponent(engine, sessions, config, debug, *args, **kwargs),
-                start_loop=False
-            )
-            loop.run_until_complete(coro)
+            async def timeout(join_timeout):
+                try:
+                    await asyncio.wait_for(join_timeout, timeout=TIMEOUT_TO_JOIN)
+                except asyncio.exceptions.TimeoutError:
+                    logging.error(_("Did not join WAMP router with {timeout}s").format(timeout=TIMEOUT_TO_JOIN))
+                    asyncio.get_event_loop().stop()
+
+            async def start():
+                join_timeout = asyncio.Future()
+
+                asyncio.create_task(timeout(join_timeout))
+                coro = runner.run(
+                    lambda *args, **kwargs: DoorstepComponent(engine, sessions, config, debug, join_timeout, *args, **kwargs),
+                    start_loop=False
+                )
+                await coro
+            loop.run_until_complete(start())
             loop.run_forever()
             print(f"Run exited: waiting {RECONNECT_DELAY} seconds")
             time.sleep(RECONNECT_DELAY)
