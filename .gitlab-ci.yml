@@ -62,8 +62,7 @@ deploy_dev:
   - kubectl config use-context "$CI_PROJECT_ID"
   stage: deploy
   script:
-  script:
-  - kubectl set image deployment/$CI_ENVIRONMENT_SLUG-doorstep doorstep=$CONTAINER_PHPFPM_IMAGE
+  - kubectl set image deployment/$CI_ENVIRONMENT_SLUG-lintol-doorstep doorstep=$CONTAINER_PHPFPM_IMAGE
   environment:
     name: ltl-doorstep-dev
     url: http://$CI_ENVIRONMENT_SLUG.$CI_TARGET_DOMAIN
