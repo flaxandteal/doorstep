@@ -94,7 +94,7 @@ def load_reference_data(location):
     global _active_config
     config = _active_config
 
-    path = os.path.join(os.path.dirname(__file__), '../../..', 'tests', 'examples', 'data', location)
+    path = location
 
     if 'reference-data' in config:
         if 'storage' in config['reference-data'] and config['reference-data']['storage'] == 'minio':

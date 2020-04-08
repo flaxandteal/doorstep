@@ -305,13 +305,20 @@ class Report(Serializable):
                 issues_by_table[self.table_string_from_issue(issue)][level].append(issue)
 
         tables = []
-        total_errors = 0
+        total_items = {
+            logging.ERROR: 0,
+            logging.WARNING: 0,
+            logging.INFO: 0
+        }
         total_valid = True
         for table_string in table_strings:
             table = issues_by_table[table_string]
             report = {k: [item.render() for item in v] for k, v in table.items()}
-            error_count = sum([len(r) for r in report.values()])
-            total_errors += error_count
+            item_count = sum([len(r) for r in report.values()])
+
+            for level, items in report.items():
+                total_items[level] += len(items)
+
             valid = not bool(report[logging.ERROR])
             total_valid = valid and total_valid
 
@@ -329,13 +336,22 @@ class Report(Serializable):
                     'scheme': 'file',
                     'encoding': self.properties['encoding'],
                     'schema': None,
-                    'error-count': error_count
+                    'item-count': item_count,
+                    'error-count': len(report[logging.ERROR]),
+                    'warning-count': len(report[logging.ERROR]),
+                    'information-count': len(report[logging.ERROR])
                 }
             )
 
         results = {
             'supplementary': supplementary,
-            'error-count': total_errors,
+            'item-count': sum(total_items.values()),
+            'error-count': sum(total_items.values()), # Legacy
+            'counts': {
+                'errors': total_items[logging.ERROR],
+                'warnings': total_items[logging.WARNING],
+                'informations': total_items[logging.INFO]
+            },
             'valid': total_valid,
             'tables': tables,
             'filename': filename,

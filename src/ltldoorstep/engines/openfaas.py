@@ -27,8 +27,6 @@ def _check_allowed_functions(x, fn, allowed_functions):
         if x == tag:
             return x, function
 
-        print(tag, function, x, fn)
-
         # We allow matching by a pattern, between two slashes - in which case the OpenFaaS function
         # must also follow its own pattern, and match the metadata.docker['image'] (an abuse, as this
         # must then actually be the OpenFaaS function name, not the docker image for the function)
