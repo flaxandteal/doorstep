@@ -4,6 +4,7 @@ variables:
   CONTAINER_IMAGE: $CI_REGISTRY_IMAGE:$CI_PIPELINE_ID
   CONTAINER_RELEASE_IMAGE: $GCP_ECR_URI:latest
   DOCKER_DRIVER: overlay
+  DOCKER_HOST: tcp://localhost:2375/
 
 stages:
 - build
