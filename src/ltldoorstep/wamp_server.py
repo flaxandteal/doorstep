@@ -234,7 +234,7 @@ def launch_wamp_real(engine, router='localhost:8080', config={}, debug=False):
             async def timeout(join_timeout):
                 try:
                     await asyncio.wait_for(join_timeout, timeout=TIMEOUT_TO_JOIN)
-                except asyncio.exceptions.TimeoutError:
+                except asyncio.TimeoutError:
                     logging.error(_("Did not join WAMP router with {timeout}s").format(timeout=TIMEOUT_TO_JOIN))
                     asyncio.get_event_loop().stop()
 
