@@ -212,6 +212,7 @@ class DoorstepComponent(ApplicationSession):
     def onDisconnect(self):
         logging.error(_("Disconnected from WAMP router"))
         asyncio.get_event_loop().stop()
+        raise RuntimeError(_("Disconnected from WAMP router"))
 
 
 def launch_wamp_real(engine, router='localhost:8080', config={}, debug=False):
@@ -237,6 +238,7 @@ def launch_wamp_real(engine, router='localhost:8080', config={}, debug=False):
                 except asyncio.TimeoutError:
                     logging.error(_("Did not join WAMP router with {timeout}s").format(timeout=TIMEOUT_TO_JOIN))
                     asyncio.get_event_loop().stop()
+                    raise RuntimeError(_("Did not join WAMP router with {timeout}s").format(timeout=TIMEOUT_TO_JOIN))
 
             async def start():
                 join_timeout = asyncio.Future()
