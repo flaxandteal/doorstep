@@ -1,10 +1,14 @@
 provider:
   name: openfaas
-  gateway: http://127.0.0.1:8080
+  gateway: http://127.0.0.1:8084
 functions:
   ltl-openfaas-status:
     lang: python3
     handler: ./ltl-openfaas-status
     image: flaxandteal/ltl-openfaas-status:latest
+    environment: # move to secrets
+      read_timeout: 600s
+      write_timeout: 600s
+      exec_timeout: 600s
     secrets:
     - authentication-secret

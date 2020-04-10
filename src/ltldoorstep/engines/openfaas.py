@@ -160,12 +160,21 @@ class OpenFaaSEngine(Engine):
         return content
 
     @staticmethod
-    async def _get_functions(openfaas_host, openfaas_cred, allowed_functions={}):
+    async def _make_openfaas_call(openfaas_host, openfaas_cred, function, get=False, data={}, processor_name=None):
         rq = None
+        if get:
+            method = requests.get
+        else:
+            method = requests.post
+
         try:
-            rq = requests.get(f'{openfaas_host}/function/ltl-openfaas-status', json={
-            }, auth=HTTPBasicAuth('admin', openfaas_cred))
+            rq = method(
+                f'{openfaas_host}/function/{function}',
+                json=data,
+                auth=HTTPBasicAuth('admin', openfaas_cred)
+            )
         except Exception as e:
+            logging.error(_("OpenFaaS call threw exception"))
             logging.error(e)
             if rq:
                 status_code = rq.status_code
@@ -174,17 +183,46 @@ class OpenFaaSEngine(Engine):
 
             raise LintolDoorstepException(
                 e,
+                processor=processor_name,
                 status_code=str(status_code)
             )
 
         try:
             content = json.loads(rq.content)
         except Exception as e:
+            logging.error(_("OpenFaaS call JSON decode failed"))
+            logging.error(rq.status_code)
             logging.error(rq.content)
             raise LintolDoorstepException(
                 e,
-                message=rq.content
+                message=rq.content,
+                processor=processor_name
             )
+
+        if 'error' in content and content['error']:
+            exception = json.loads(content['exception'])
+            if 'code' in exception:
+                status_code = exception['code']
+            else:
+                status_code = rq.status_code
+
+            raise LintolDoorstepException(
+                exception['exception'],
+                processor=processor_name,
+                message=exception['message'],
+                status_code=str(status_code)
+            )
+
+        return rq, content
+
+    @staticmethod
+    async def _get_functions(openfaas_host, openfaas_cred, allowed_functions={}):
+        rq, content = await OpenFaaSEngine._make_openfaas_call(
+            openfaas_host,
+            openfaas_cred,
+            'ltl-openfaas-status',
+            processor_name='STATUS-CHECKER'
+        )
 
         rev_functions = {
             v: k
@@ -223,54 +261,25 @@ class OpenFaaSEngine(Engine):
                 error_msg += _("\nUpdate .ltldoorstep.yml to add more")
                 raise RuntimeError(error_msg)
 
-            rq = None
-            try:
-                rq = requests.post(f'{openfaas_host}/function/{function}', json={
-                    'filename': content,
-                    'workflow': tag,
-                    'metadata': json.dumps(metadata.to_dict()),
-                }, auth=HTTPBasicAuth('admin', openfaas_cred))
-            except Exception as e:
-                logging.error(e)
-                if rq:
-                    status_code = rq.status_code
-                else:
-                    status_code = -1
+            data = {
+                'filename': content,
+                'workflow': tag,
+                'metadata': json.dumps(metadata.to_dict()),
+            }
 
-                raise LintolDoorstepException(
-                    e,
-                    processor=processor['name'],
-                    status_code=str(status_code)
-                )
-
-            try:
-                content = json.loads(rq.content)
-            except Exception as e:
-                logging.error(rq.content)
-                raise LintolDoorstepException(
-                    e,
-                    message=rq.content,
-                    processor=processor['name']
-                )
-
-            if 'error' in content and content['error']:
-                exception = json.loads(content['exception'])
-                if 'code' in exception:
-                    status_code = exception['code']
-                else:
-                    status_code = rq.status_code
-
-                raise LintolDoorstepException(
-                    exception['exception'],
-                    processor=processor['name'],
-                    message=exception['message'],
-                    status_code=str(status_code)
-                )
+            rq, content = await OpenFaaSEngine._make_openfaas_call(
+                openfaas_host,
+                openfaas_cred,
+                function,
+                data=data,
+                processor_name=processor['name']
+            )
 
             try:
                 report = Report.parse(content)
             except Exception as e:
-                logging.error(rq.content)
+                logging.error(_("Could not parse report from OpenFaaS call"))
+                logging.error(content)
                 raise LintolDoorstepException(
                     e,
                     processor=processor['name']
