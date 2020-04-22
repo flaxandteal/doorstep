@@ -245,7 +245,6 @@ class OpenFaaSEngine(Engine):
             for cntt in content
             if matched[cntt['name']]
         ]
-        print(content)
 
         return content
 
