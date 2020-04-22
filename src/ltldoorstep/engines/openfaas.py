@@ -120,7 +120,9 @@ class OpenFaaSEngine(Engine):
             'filename': filename,
             'content': filename
         }]
-        report = await self._run(filename, filename, processors, self.openfaas_host, self.openfaas_cred, self.allowed_functions)
+
+        target = 'doorstep-no-session-%s' % str(uuid.uuid4())
+        report = await self._run(filename, filename, processors, self.openfaas_host, self.openfaas_cred, self.allowed_functions, target=target)
         return report.compile(filename, metadata)
 
     async def monitor_pipeline(self, session):
@@ -130,7 +132,7 @@ class OpenFaaSEngine(Engine):
             # await session['completion'].acquire()
             data = await session['queue'].get()
             try:
-                result = await self._run(data['filename'], data['content'], session['processors'], self.openfaas_host, self.openfaas_cred, self.allowed_functions)
+                result = await self._run(data['filename'], data['content'], session['processors'], self.openfaas_host, self.openfaas_cred, self.allowed_functions, target=session['name'])
                 session['result'] = result
             except Exception as error:
                 __, __, exc_traceback = sys.exc_info()
@@ -238,16 +240,17 @@ class OpenFaaSEngine(Engine):
             return None
 
         matched = {cntt['name']: _check_functions(cntt['name']) for cntt in content}
-        content = {
-            rev_functions[matched[cntt['name']]]: cntt
+        content = [
+            [rev_functions[matched[cntt['name']]], cntt]
             for cntt in content
             if matched[cntt['name']]
-        }
+        ]
+        print(content)
 
         return content
 
     @staticmethod
-    async def _run(filename, content, processors, openfaas_host, openfaas_cred, allowed_functions={}):
+    async def _run(filename, url, processors, openfaas_host, openfaas_cred, allowed_functions={}, target=None):
         reports = []
         for processor in processors:
             metadata = processor['metadata']
@@ -261,9 +264,14 @@ class OpenFaaSEngine(Engine):
                 error_msg += _("\nUpdate .ltldoorstep.yml to add more")
                 raise RuntimeError(error_msg)
 
+            if target:
+                report_target = os.path.join(target, 'report-%s.json' % str(uuid.uuid4()))
+            else:
+                report_target = None
             data = {
-                'filename': content,
+                'filename': url,
                 'workflow': tag,
+                'target': report_target,
                 'metadata': json.dumps(metadata.to_dict()),
             }
 

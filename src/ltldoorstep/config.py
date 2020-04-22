@@ -79,7 +79,6 @@ def load_from_minio(prefix, location):
 
     try:
         data_object = _mo.get_object(mo_bucket, f'{prefix}/{location}')
-        stream_req = io.BytesIO()
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, 'wb') as f:
             for d in data_object.stream(32*1024):
