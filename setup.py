@@ -62,6 +62,7 @@ setup(
         'docker',
         'retry',
         'minio',
+        'aiohttp',
         'aiodocker'
     ],
     include_package_data=True,

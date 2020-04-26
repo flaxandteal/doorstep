@@ -2,6 +2,7 @@
 
 from contextlib import contextmanager
 import traceback
+import aiohttp
 import requests
 from requests.auth import HTTPBasicAuth
 import re
@@ -164,24 +165,25 @@ class OpenFaaSEngine(Engine):
     @staticmethod
     async def _make_openfaas_call(openfaas_host, openfaas_cred, function, get=False, data={}, processor_name=None):
         rq = None
-        if get:
-            method = requests.get
-        else:
-            method = requests.post
 
+        status_code = -1
         try:
-            rq = method(
-                f'{openfaas_host}/function/{function}',
-                json=data,
-                auth=HTTPBasicAuth('admin', openfaas_cred)
-            )
+            async with aiohttp.ClientSession() as session:
+                if get:
+                    method = session.get
+                else:
+                    method = session.post
+
+                async with method(
+                            f'{openfaas_host}/function/{function}',
+                            json=data,
+                            auth=aiohttp.BasicAuth('admin', openfaas_cred)
+                        ) as rq:
+                    status_code = rq.status
+                    text = await rq.text()
         except Exception as e:
             logging.error(_("OpenFaaS call threw exception"))
             logging.error(e)
-            if rq:
-                status_code = rq.status_code
-            else:
-                status_code = -1
 
             raise LintolDoorstepException(
                 e,
@@ -190,14 +192,15 @@ class OpenFaaSEngine(Engine):
             )
 
         try:
-            content = json.loads(rq.content)
+            content = json.loads(text)
         except Exception as e:
             logging.error(_("OpenFaaS call JSON decode failed"))
-            logging.error(rq.status_code)
-            logging.error(rq.content)
+            logging.error(status_code)
+            content = text
+            logging.error(content)
             raise LintolDoorstepException(
                 e,
-                message=rq.content,
+                message=content,
                 processor=processor_name
             )
 
@@ -206,7 +209,7 @@ class OpenFaaSEngine(Engine):
             if 'code' in exception:
                 status_code = exception['code']
             else:
-                status_code = rq.status_code
+                status_code = status_code
 
             raise LintolDoorstepException(
                 exception['exception'],
@@ -215,11 +218,11 @@ class OpenFaaSEngine(Engine):
                 status_code=str(status_code)
             )
 
-        return rq, content
+        return content
 
     @staticmethod
     async def _get_functions(openfaas_host, openfaas_cred, allowed_functions={}):
-        rq, content = await OpenFaaSEngine._make_openfaas_call(
+        content = await OpenFaaSEngine._make_openfaas_call(
             openfaas_host,
             openfaas_cred,
             'ltl-openfaas-status',
@@ -274,7 +277,7 @@ class OpenFaaSEngine(Engine):
                 'metadata': json.dumps(metadata.to_dict()),
             }
 
-            rq, content = await OpenFaaSEngine._make_openfaas_call(
+            content = await OpenFaaSEngine._make_openfaas_call(
                 openfaas_host,
                 openfaas_cred,
                 function,

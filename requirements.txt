@@ -15,4 +15,5 @@ asynctest
 retry
 minio
 aiodocker
+aiohttp
 docker
