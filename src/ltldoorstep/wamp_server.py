@@ -200,10 +200,16 @@ class DoorstepComponent(ApplicationSession):
         async def status_retrieve():
             results = await self._engine.check_processor_statuses()
 
+            incomplete_sessions = []
+            for name, session in self._sessions.items():
+                if 'completion' in session and not session['completion'].is_set():
+                    incomplete_sessions.append(name)
+
             return self.publish(
                 'com.ltldoorstep.status',
                 self._id,
                 results,
+                incomplete_sessions,
                 options=PublishOptions(acknowledge=True)
             )
 
