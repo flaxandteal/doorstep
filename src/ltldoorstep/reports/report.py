@@ -357,9 +357,7 @@ class Report(Serializable):
 
                 issues_by_table[self.table_string_from_issue(issue)][level].append(issue)
 
-        print(skipped)
         skipped = _merge_issues_skipped(skipped, self.properties['issues-skipped'], recounting=True)
-        print(skipped)
 
         tables = []
         total_items = {
