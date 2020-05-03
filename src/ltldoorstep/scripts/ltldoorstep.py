@@ -135,6 +135,8 @@ def process(ctx, filename, workflow, engine, metadata, package, configuration):
 
     if context_args:
         metadata = DoorstepContext(**context_args)
+    else:
+        metadata = DoorstepContext.from_dict(metadata)
 
     loop = asyncio.get_event_loop()
     result = loop.run_until_complete(engine.run(filename, workflow, metadata, bucket=bucket))

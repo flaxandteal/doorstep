@@ -8,6 +8,14 @@ import os
 from ..metadata import DoorstepContext
 from ..encoders import Serializable
 
+def _merge_issues_skipped(skip_a, skip_b):
+    if skip_b:
+        for code, (skipped, total) in skip_b.items():
+            if code in skip_a:
+                existing = skip_a[code]
+                skip_a[code] = (existing[0] + skipped, existing[1] + total)
+    return skip_a
+
 def get_report_class_from_preset(preset):
     if preset not in _report_class_from_preset:
         raise NotImplementedError(_(
@@ -76,6 +84,9 @@ class ReportIssue:
     def __repr__(self):
         return '(|Issue: %s|)' % str(self)
 
+    def get_identifier(self):
+        return '{}|{}'.format(self.processor, self.code)
+
     def get_item(self):
         return self.item
 
@@ -112,6 +123,7 @@ class ReportIssueLiteral(ReportIssue):
 
 class Report(Serializable):
     preset = None
+    max_issues_per_code = 100
 
     @classmethod
     def get_preset(cls):
@@ -149,7 +161,7 @@ class Report(Serializable):
     def __repr__(self):
         return '(|Report: %s|)' % str(self)
 
-    def __init__(self, processor, info, filename='', metadata=None, headers=None, encoding='utf-8', time=0., row_count=None, supplementary=None, issues=None):
+    def __init__(self, processor, info, filename='', metadata=None, headers=None, encoding='utf-8', time=0., row_count=None, supplementary=None, issues=None, issues_skipped=None):
         if issues is None:
             self.issues = {
                 logging.ERROR: [],
@@ -169,12 +181,17 @@ class Report(Serializable):
         self.supplementary = supplementary
         self.filename = filename
         self.metadata = metadata
+        self.processors_count = {}
+
+        if issues_skipped is None:
+            issues_skipped = {}
 
         self.properties = {
             'row-count': row_count,
             'time': time,
             'encoding': encoding,
             'preset': self.get_preset(),
+            'issues-skipped': issues_skipped,
             'headers': headers
         }
 
@@ -210,6 +227,7 @@ class Report(Serializable):
         row_count = None
         time = None
         encoding = None
+        issues_skipped = {}
         headers = None
 
         metadata = None
@@ -220,8 +238,6 @@ class Report(Serializable):
                 metadata = DoorstepContext.from_dict(dictionary['metadata'])
 
         for table in dictionary['tables']:
-            # print("*****type check**** %s" % type(dictionary))
-
             issues[logging.ERROR] += [
                 ReportIssue.parse(logging.ERROR, issue)
                 for issue in
@@ -246,6 +262,7 @@ class Report(Serializable):
             row_count = table['row-count'] if 'time' in table else None
             time = table['time'] if 'time' in table else None
             encoding = table['encoding'] if 'encoding' in table else None
+            issues_skipped = table['issues-skipped'] if 'issues-skipped' in table else {}
             headers = table['headers'] if 'headers' in table else None
 
         supplementary = dictionary['supplementary']
@@ -261,7 +278,8 @@ class Report(Serializable):
             encoding=encoding,
             headers=headers,
             metadata=metadata,
-            issues=issues
+            issues=issues,
+            issues_skipped=issues_skipped
         )
 
     def update(self, additional):
@@ -273,6 +291,11 @@ class Report(Serializable):
         for prop in ('row-count', 'encoding', 'headers', 'preset'):
             if self.properties[prop] is None:
                 self.properties[prop] = additional.properties[prop]
+
+        self.properties['issues-skipped'] = _merge_issues_skipped(
+            self.properties['issues-skipped'],
+            additional.properties['issues-skipped']
+        )
 
     @staticmethod
     def table_string_from_issue(issue):
@@ -300,9 +323,28 @@ class Report(Serializable):
         table_strings = {self.table_string_from_issue(issue) for issues in self.issues.values() for issue in issues}
         table_strings = sorted(list(table_strings))
         issues_by_table = {ts: {logging.ERROR: [], logging.WARNING: [], logging.INFO: []} for ts in table_strings}
+
+        codes_count = {}
+        skipped = {}
         for level, issue_list in self.issues.items():
             for issue in issue_list:
+                code = issue.get_identifier()
+                if code not in codes_count:
+                    codes_count[code] = 0
+
+                # Limit the number of issues one code can contribute
+                if codes_count[code] > self.max_issues_per_code:
+                    continue
+
+                codes_count[code] += 1
+
+                if codes_count[code] == self.max_issues_per_code:
+                    total = len([1 for iss in issue_list if iss.get_identifier() == code])
+                    if total > codes_count[code]:
+                        skipped[code] = [total - codes_count[code], total]
+
                 issues_by_table[self.table_string_from_issue(issue)][level].append(issue)
+        skipped = _merge_issues_skipped(skipped, self.properties['issues-skipped'])
 
         tables = []
         total_items = {
@@ -353,6 +395,7 @@ class Report(Serializable):
                 'informations': total_items[logging.INFO]
             },
             'valid': total_valid,
+            'issues-skipped': skipped,
             'tables': tables,
             'filename': filename,
             'preset': self.get_preset(),
@@ -381,7 +424,6 @@ class Report(Serializable):
     def add_issue(self, log_level, code, message, item=None, error_data=None, context=None, at_top=False):
         """This function will add an issue to the report and takes as parameters the processor, the log level, code, message"""
 
-
         if log_level not in self.issues:
             raise RuntimeError(_('Log-level must be one of logging.INFO, logging.WARNING or logging.ERROR'))
 
@@ -400,6 +442,7 @@ def properties_from_report(report):
         'time': report['time'],
         'encoding': table['encoding'],
         'preset': report['preset'],
+        'issues-skipped': report['issues-skipped'],
         'headers': table['headers']
     }
 
