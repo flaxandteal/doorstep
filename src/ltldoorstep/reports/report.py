@@ -8,12 +8,24 @@ import os
 from ..metadata import DoorstepContext
 from ..encoders import Serializable
 
-def _merge_issues_skipped(skip_a, skip_b):
+# Delta allows us to avoid adding totals together and
+# double-counting existing, kept, rows
+def _merge_issues_skipped(skip_a, skip_b, recounting=False):
     if skip_b:
-        for code, (skipped, total) in skip_b.items():
+        for code, tpl in skip_b.items():
+            if len(tpl) == 3:
+                (skipped, kept, total) = tpl
+            else:
+                (skipped, total) = tpl
+                kept = 100
             if code in skip_a:
                 existing = skip_a[code]
-                skip_a[code] = (existing[0] + skipped, existing[1] + total)
+                if recounting:
+                    skip_a[code] = (existing[0] + skipped, existing[1], existing[2] + total - existing[1])
+                else: # merging
+                    skip_a[code] = (existing[0] + skipped, existing[1] + kept, existing[2] + total)
+            else:
+                skip_a[code] = (skipped, kept, total)
     return skip_a
 
 def get_report_class_from_preset(preset):
@@ -262,11 +274,11 @@ class Report(Serializable):
             row_count = table['row-count'] if 'time' in table else None
             time = table['time'] if 'time' in table else None
             encoding = table['encoding'] if 'encoding' in table else None
-            issues_skipped = table['issues-skipped'] if 'issues-skipped' in table else {}
             headers = table['headers'] if 'headers' in table else None
 
         supplementary = dictionary['supplementary']
         cls = get_report_class_from_preset(dictionary['preset'])
+        issues_skipped = dictionary['issues-skipped'] if 'issues-skipped' in dictionary else {}
 
         return cls(
             '(unknown)',
@@ -332,19 +344,22 @@ class Report(Serializable):
                 if code not in codes_count:
                     codes_count[code] = 0
 
+                codes_count[code] += 1
+
                 # Limit the number of issues one code can contribute
                 if codes_count[code] > self.max_issues_per_code:
                     continue
 
-                codes_count[code] += 1
-
                 if codes_count[code] == self.max_issues_per_code:
-                    total = len([1 for iss in issue_list if iss.get_identifier() == code])
+                    total = len([1 for lvl, ilist in self.issues.items() for iss in ilist if iss.get_identifier() == code])
                     if total > codes_count[code]:
-                        skipped[code] = [total - codes_count[code], total]
+                        skipped[code] = [total - codes_count[code], codes_count[code], total]
 
                 issues_by_table[self.table_string_from_issue(issue)][level].append(issue)
-        skipped = _merge_issues_skipped(skipped, self.properties['issues-skipped'])
+
+        print(skipped)
+        skipped = _merge_issues_skipped(skipped, self.properties['issues-skipped'], recounting=True)
+        print(skipped)
 
         tables = []
         total_items = {
