@@ -102,6 +102,9 @@ class ReportIssue:
     def get_item(self):
         return self.item
 
+    def get_context(self):
+        return self.context
+
     @classmethod
     def parse(cls, level, data):
         return cls(
