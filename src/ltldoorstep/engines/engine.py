@@ -34,24 +34,6 @@ class Engine:
     async def get_output(self, session):
         raise NotImplementedError("Function must be implemented")
 
-    async def get_artifact(self, session, artifact, target=None):
-        if artifact.startswith('report:'):
-            report = await self.get_output(session)
-
-            report_type = artifact.replace('report:', '')
-
-            printer_types = printer.get_printer_types()
-            if not report_type in printer_types:
-                raise RuntimeError(_("Report type must be one of: {}").format(', '.join(printer_types)))
-
-            prnt = printer.get_printer(report_type, debug=False, target=target)
-
-            prnt.build_report(report)
-
-            return prnt.get_output()
-        else:
-            raise NotImplementedError("Function must be implemented (unless artifact is report)")
-
     @contextmanager
     def make_session(self):
         raise NotImplementedError("Function must be implemented")

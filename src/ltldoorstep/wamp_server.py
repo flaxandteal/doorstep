@@ -111,8 +111,10 @@ class ReportResource():
         self._engine = engine
         self._config = config
 
-    async def get(self, session, artifact='report:json'):
-        result_string = await self._engine.get_artifact(session, artifact)
+    async def get(self, session):
+        result = await self._engine.get_output(session)
+        result = result.__serialize__()
+        result_string = json.dumps(result)
 
         if len(result_string) > self._config['report']['max-length-chars']:
             raise RuntimeError(_("Report is too long: %d characters") % len(result_string))

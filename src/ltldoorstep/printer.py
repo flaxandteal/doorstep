@@ -9,7 +9,7 @@ import json
 import tabulate
 import gettext
 from enum import Enum
-from .processor import Report
+from .reports.report import Report
 
 
 LEVEL_MAPPING = [

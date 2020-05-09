@@ -143,28 +143,16 @@ def process(ctx, filename, workflow, engine, context, package, configuration, ar
     else:
         context = DoorstepContext.from_dict(context)
 
-    loop = asyncio.get_event_loop()
-    session = {
-        'result': loop.run_until_complete(engine.run(filename, workflow, context, bucket=bucket)),
-        'completion': asyncio.Event()
-    }
-    session['completion'].set()
-
     if artifact:
-        result = loop.run_until_complete(engine.get_artifact(
-            session,
-            artifact=artifact,
-            target=printer.get_target()
-        ))
+        context.settings['artifact'] = [artifact]
 
-        if result:
-            print(result)
-    else:
-        result = loop.run_until_complete(engine.get_output(session))
+    loop = asyncio.get_event_loop()
 
-        printer.build_report(result)
+    result = loop.run_until_complete(engine.run(filename, workflow, context, bucket=bucket))
 
-        printer.print_output()
+    printer.build_report(result)
+
+    printer.print_output()
 
 @cli.command()
 @click.option('--engine', required=True)
