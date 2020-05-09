@@ -18,7 +18,7 @@ import tempfile
 import json
 from .engine import Engine
 from ..errors import LintolDoorstepException, LintolDoorstepContainerException
-from ..metadata import DoorstepContext
+from ..context import DoorstepContext
 from ..ini import DoorstepIni
 
 
@@ -71,25 +71,25 @@ class DockerEngine(Engine):
         if 'processors' not in session:
             session['processors'] = []
 
-        for uid, metadata in ini.definitions.items():
+        for uid, context in ini.definitions.items():
             docker_image = 'lintol/doorstep'
             docker_revision = 'latest'
 
-            if metadata.docker['image']:
-                docker_image = metadata.docker['image']
-            if metadata.docker['revision']:
-                docker_image = metadata.docker['revision']
+            if context.docker['image']:
+                docker_image = context.docker['image']
+            if context.docker['revision']:
+                docker_image = context.docker['revision']
 
             docker = '{image}:{revision}'.format(image=docker_image, revision=docker_revision)
 
             filename = None
             content = None
-            if metadata.module:
-                filename = metadata.module
-                if metadata.module in modules:
-                    content = modules[metadata.module]
+            if context.module:
+                filename = context.module
+                if context.module in modules:
+                    content = modules[context.module]
                 else:
-                    error_msg = _("Module content missing from processor %s") % metadata.module
+                    error_msg = _("Module content missing from processor %s") % context.module
                     logging.error(error_msg)
                     raise RuntimeError(error_msg)
 
@@ -97,10 +97,10 @@ class DockerEngine(Engine):
                 'name' : uid,
                 'filename': filename,
                 'content': content,
-                'metadata': metadata
+                'context': context
             })
 
-    async def run(self, filename, workflow_module, metadata, bucket=None):
+    async def run(self, filename, workflow_module, context, bucket=None):
         """Start the execution process over the cluster."""
 
         with open(filename, 'r') as data_file:
@@ -112,7 +112,7 @@ class DockerEngine(Engine):
 
         processors = [{
             'name': 'processor',
-            'metadata': metadata,
+            'context': context,
             'filename': basename,
             'content': workflow_content
         }]
@@ -183,13 +183,13 @@ class DockerEngine(Engine):
             report_files = []
             for processor in processors:
                 processor_root = os.path.join(mounted_dir, 'processors', processor['name'])
-                metadata = processor['metadata']
+                context = processor['context']
 
                 os.makedirs(processor_root)
 
-                if metadata.supplementary:
+                if context.supplementary:
                     supplementary_internal = {}
-                    for i, (key, supplementary) in enumerate(metadata.supplementary.items()):
+                    for i, (key, supplementary) in enumerate(context.supplementary.items()):
                         error = _("(unknown error)")
                         if supplementary.startswith('error://'):
                             error = supplementary[len('error://'):]
@@ -211,10 +211,10 @@ class DockerEngine(Engine):
                             'location': os.path.join('/pfs', 'processors', processor['name'], supplementary_basename)
                         }
 
-                    metadata.supplementary = supplementary_internal
+                    context.supplementary = supplementary_internal
 
-                with open(os.path.join(processor_root, 'metadata.json'), 'w') as metadata_file:
-                    json.dump(metadata.to_dict(), metadata_file)
+                with open(os.path.join(processor_root, 'context.json'), 'w') as context_file:
+                    json.dump(context.to_dict(), context_file)
 
                 if processor['filename']:
                     shutil.copy(file_manager.get(processor['filename']), os.path.join(processor_root, processor['filename']))
@@ -227,20 +227,20 @@ class DockerEngine(Engine):
                 docker_revision = 'latest'
                 lang = 'C.UTF-8' # TODO: more sensible default
 
-                if metadata.docker['image']:
-                    docker_image = metadata.docker['image']
-                if metadata.docker['revision']:
-                    docker_revision = metadata.docker['revision']
+                if context.docker['image']:
+                    docker_image = context.docker['image']
+                if context.docker['revision']:
+                    docker_revision = context.docker['revision']
 
-                if metadata.lang:
+                if context.lang:
                     # TODO: check lang is valid
-                    lang = metadata.lang
+                    lang = context.lang
 
                 envs = {
                     'LANG': lang,
                     'LINTOL_PROCESSOR_DIRECTORY': '/pfs/processors/%s' % processor['name'],
                     'LINTOL_OUTPUT_FILE': '/pfs/out/raw/%s.json' % processor['name'],
-                    'LINTOL_METADATA': '/pfs/processors/%s/metadata.json' % processor['name'],
+                    'LINTOL_CONTEXT': '/pfs/processors/%s/context.json' % processor['name'],
                     'LINTOL_INPUT_DATA': '/pfs/data',
                     'LINTOL_DATA_FILE': data_basename
                 }

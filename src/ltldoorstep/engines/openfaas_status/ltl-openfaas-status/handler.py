@@ -11,8 +11,11 @@ def handle(req):
     with open('/var/openfaas/secrets/authentication-secret', 'r') as f:
         openfaas_cred = f.read().strip()
 
+    with open('/var/openfaas/secrets/openfaas-endpoint', 'r') as f:
+        openfaas_endpoint = f.read().strip()
+
     rq = requests.get(
-        f'http://gateway.srv-openfaas.svc.cluster.local:8080/system/functions',
+        openfaas_endpoint,
         json={
         },
         auth=HTTPBasicAuth('admin', openfaas_cred)

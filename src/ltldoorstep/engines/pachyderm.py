@@ -73,22 +73,22 @@ class PachydermEngine(Engine):
             'pfs': pfs
         }
 
-    def add_processor(self, modules, metadata, session):
+    def add_processor(self, modules, context, session):
         """Mark a module_name as a processor."""
 
         self.logger.debug("Adding processor")
-        self.logger.debug(metadata)
+        self.logger.debug(context)
 
         lang = 'C.UTF-8' # TODO: more sensible default
 
-        if 'lang' in metadata:
+        if 'lang' in context:
             # TODO: check lang is valid
-            lang = metadata['lang']
+            lang = context['lang']
 
-        if 'definitions' not in metadata:
-            metadata['definitions'] = {str(uuid.uuid4()): {}}
+        if 'definitions' not in context:
+            context['definitions'] = {str(uuid.uuid4()): {}}
 
-        for uid, processor in metadata['definitions'].items():
+        for uid, processor in context['definitions'].items():
             docker_image = 'lintol/doorstep'
             docker_revision = 'latest'
 
@@ -103,13 +103,13 @@ class PachydermEngine(Engine):
             docker = '{image}:{revision}'.format(image=docker_image, revision=docker_revision)
             configuration = {
                 'definition': processor,
-                'settings': metadata['settings'] if 'settings' in metadata else {}
+                'settings': context['settings'] if 'settings' in context else {}
             }
 
-            metadata_json = json.dumps(configuration).encode('utf-8')
+            context_json = json.dumps(configuration).encode('utf-8')
 
             files = {
-                'metadata.json': metadata_json,
+                'context.json': context_json,
                 'LANG': lang.encode('utf-8'),
                 'IMAGE': docker.encode('utf-8')
             }
@@ -184,12 +184,12 @@ class PachydermEngine(Engine):
                 session['pipeline'] = pipeline
                 yield session
 
-    async def run(self, filename, workflow_module, metadata, bucket=None):
+    async def run(self, filename, workflow_module, context, bucket=None):
         """Execute the pipeline on a Pachyderm cluster."""
 
         with self.make_session() as session:
             with open(workflow_module, 'r') as file_obj:
-                self.add_processor({'processor.py', file_obj.read().encode('utf-8')}, metadata, session)
+                self.add_processor({'processor.py', file_obj.read().encode('utf-8')}, context, session)
 
             if bucket:
                 content = filename

@@ -1,4 +1,5 @@
 import colorama
+import io
 import pandas
 from collections import OrderedDict
 import re
@@ -45,11 +46,16 @@ class Printer:
     def get_output(self):
         raise NotImplementedError("No outputter implemented for this printer")
 
+    def get_target(self):
+        return self._target
+
     def print_output(self):
         output = self.get_output()
 
         if self._target is None:
-            print(output)
+            return str(output)
+        elif isinstance(self._target, io.IOBase):
+            self._target.write(output)
         else:
             with open(self._target, 'w') as target_file:
                 target_file.write(output)
@@ -252,6 +258,7 @@ class JsonPrinter(Printer):
         return self._output
 
     def build_report(self, result_sets):
+        result_sets = result_sets.__serialize__()
         self._output = json.dumps(result_sets)
 
 class HtmlPrinter(Printer):

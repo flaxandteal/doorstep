@@ -1,6 +1,6 @@
 import json
 import logging
-from .metadata import DoorstepContext
+from .context import DoorstepContext
 
 class DoorstepIni:
     def __init__(self, lang=None, definitions={}, context_package=None, context_resource=None):

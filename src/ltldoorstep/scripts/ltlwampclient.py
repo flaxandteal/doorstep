@@ -77,18 +77,18 @@ def status(ctx):
 
 
 @cli.command()
-@click.option('-m', '--metadata', default=None)
+@click.option('-i', '--ini', default=None)
 @click.argument('filename', 'data file to process')
 @click.argument('workflow', 'Python workflow module')
 @click.pass_context
-def process(ctx, filename, workflow, metadata):
+def process(ctx, filename, workflow, ini):
     printer = ctx.obj['printer']
     bucket = ctx.obj['bucket']
     router_url = ctx.obj['router_url']
 
     async def _exec(cmpt):
         try:
-            await execute_workflow(cmpt, filename, workflow, metadata)
+            await execute_workflow(cmpt, filename, workflow, ini)
         except Exception as e:
             # if there is any exception thrown, it stops everything
             loop = asyncio.get_event_loop() 
@@ -189,7 +189,7 @@ def crawl(ctx, workflow, url, search, watch, watch_refresh_delay, publish, dummy
 @click.pass_context
 def find_package(ctx, workflow, package, url, watch, watch_refresh_delay, watch_persist_to, dummy_ckan):
     """
-    Find Package searches for a specific package and returns the information as metadata
+    Find Package searches for a specific package and returns the information as ini
     Arguments:
         WORKFLOW    Python workflow module (.py) to run against the data.
     """
@@ -210,12 +210,12 @@ def find_package(ctx, workflow, package, url, watch, watch_refresh_delay, watch_
     loop.run_until_complete(gather_resources(client, package, workflow, router_url, ini, printer))
     loop.run_forever()
 
-async def gather_resources(client, package, workflow, router_url, metadata, printer):
+async def gather_resources(client, package, workflow, router_url, ini, printer):
     # calls code from Monitor class that runs everything
     async def _exec(cmpt, filename):
         try:
             # calls async function to follow steps to create report
-            await execute_workflow(cmpt, filename, workflow, metadata)
+            await execute_workflow(cmpt, filename, workflow, ini)
         except Exception as e:
             loop = asyncio.get_event_loop()
             loop.stop()

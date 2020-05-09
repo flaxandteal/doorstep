@@ -10,7 +10,7 @@ import asyncio
 
 from .wamp_server import DoorstepComponent, SessionSet
 from .ini import DoorstepIni
-from .metadata import DoorstepContext
+from .context import DoorstepContext
 from . import errors
 
 

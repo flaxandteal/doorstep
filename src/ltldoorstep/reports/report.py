@@ -5,7 +5,7 @@ The Report superclass can be inherited for different forms of reporting i.e. tab
 import logging
 import json
 import os
-from ..metadata import DoorstepContext
+from ..context import DoorstepContext
 from ..encoders import Serializable
 
 # Delta allows us to avoid adding totals together and
@@ -176,7 +176,7 @@ class Report(Serializable):
     def __repr__(self):
         return '(|Report: %s|)' % str(self)
 
-    def __init__(self, processor, info, filename='', metadata=None, headers=None, encoding='utf-8', time=0., row_count=None, supplementary=None, issues=None, issues_skipped=None):
+    def __init__(self, processor, info, filename='', context=None, headers=None, encoding='utf-8', time=0., row_count=None, supplementary=None, issues=None, issues_skipped=None):
         if issues is None:
             self.issues = {
                 logging.ERROR: [],
@@ -186,8 +186,8 @@ class Report(Serializable):
         else:
             self.issues = issues
 
-        if metadata is None:
-            metadata = {}
+        if context is None:
+            context = {}
         if supplementary is None:
             supplementary = []
 
@@ -195,7 +195,7 @@ class Report(Serializable):
         self.info = info
         self.supplementary = supplementary
         self.filename = filename
-        self.metadata = metadata
+        self.context = context
         self.processors_count = {}
 
         if issues_skipped is None:
@@ -245,12 +245,12 @@ class Report(Serializable):
         issues_skipped = {}
         headers = None
 
-        metadata = None
-        if 'metadata' in dictionary:
-            if isinstance(dictionary['metadata'], DoorstepContext):
-                metadata = dictionary['metadata']
+        context = None
+        if 'context' in dictionary:
+            if isinstance(dictionary['context'], DoorstepContext):
+                context = dictionary['context']
             else:
-                metadata = DoorstepContext.from_dict(dictionary['metadata'])
+                context = DoorstepContext.from_dict(dictionary['context'])
 
         for table in dictionary['tables']:
             issues[logging.ERROR] += [
@@ -271,8 +271,8 @@ class Report(Serializable):
                     table['informations']
             ]
 
-            if metadata is None:
-                metadata = DoorstepContext(context_format=table['format'])
+            if context is None:
+                context = DoorstepContext(context_format=table['format'])
 
             row_count = table['row-count'] if 'time' in table else None
             time = table['time'] if 'time' in table else None
@@ -292,7 +292,7 @@ class Report(Serializable):
             time=time,
             encoding=encoding,
             headers=headers,
-            metadata=metadata,
+            context=context,
             issues=issues,
             issues_skipped=issues_skipped
         )
@@ -316,7 +316,7 @@ class Report(Serializable):
     def table_string_from_issue(issue):
         return ''
 
-    def compile(self, filename=None, metadata=None):
+    def compile(self, filename=None, context=None):
         supplementary = self.supplementary
 
         if filename is None:
@@ -325,11 +325,11 @@ class Report(Serializable):
         if not filename:
             filename = 'unknown.csv'
 
-        if metadata is None:
-            metadata = self.metadata
+        if context is None:
+            context = self.context
 
-        if metadata and metadata.context_format:
-            frmt = metadata.context_format
+        if context and context.context_format:
+            frmt = context.context_format
         else:
             root, frmt = os.path.splitext(filename)
             if frmt and frmt[0] == '.':

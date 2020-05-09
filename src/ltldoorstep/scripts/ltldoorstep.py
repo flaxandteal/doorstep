@@ -1,10 +1,11 @@
 import click
+import sys
 import json
 import gettext
 from ltldoorstep import printer
 from ltldoorstep.config import load_config
 from ltldoorstep.engines import engines
-from ltldoorstep.metadata import DoorstepContext
+from ltldoorstep.context import DoorstepContext
 import asyncio
 import logging
 
@@ -35,6 +36,9 @@ def get_engine(engine, config):
 @click.pass_context
 def cli(ctx, debug, bucket, output, output_file):
     gettext.install('ltldoorstep')
+
+    if output_file is None:
+        output_file = sys.stdout
 
     prnt = printer.get_printer(output, debug, target=output_file)
 
@@ -102,11 +106,12 @@ def status(ctx, engine):
 @click.argument('filename', 'data file to process')
 @click.argument('workflow', 'Python workflow module')
 @click.option('-e', '--engine', required=True)
-@click.option('-m', '--metadata', default=None)
+@click.option('-C', '--context', default=None)
+@click.option('-a', '--artifact', default=None)
 @click.option('-p', '--package', default=None)
 @click.option('-c', '--configuration', default=None)
 @click.pass_context
-def process(ctx, filename, workflow, engine, metadata, package, configuration):
+def process(ctx, filename, workflow, engine, context, package, configuration, artifact):
     printer = ctx.obj['printer']
     config = ctx.obj['config']
     bucket = ctx.obj['bucket']
@@ -117,32 +122,49 @@ def process(ctx, filename, workflow, engine, metadata, package, configuration):
         click.echo(_("Engine: %s" % engine))
     engine = engines[engine](config=config)
 
-    if metadata is None:
-        metadata = {}
+    if context is None:
+        context = {}
     else:
-        with open(metadata, 'r') as metadata_file:
-            metadata = json.load(metadata_file)
+        with open(context, 'r') as context_file:
+            context = json.load(context_file)
 
     context_args = {}
 
     if package:
         if package != '.':
-            metadata = metadata[package]
-        context_args['context_package'] = metadata
+            context = context[package]
+        context_args['context_package'] = context
 
     if configuration:
         context_args['configuration'] = json.loads(configuration)
 
     if context_args:
-        metadata = DoorstepContext(**context_args)
+        context = DoorstepContext(**context_args)
     else:
-        metadata = DoorstepContext.from_dict(metadata)
+        context = DoorstepContext.from_dict(context)
 
     loop = asyncio.get_event_loop()
-    result = loop.run_until_complete(engine.run(filename, workflow, metadata, bucket=bucket))
-    printer.build_report(result)
+    session = {
+        'result': loop.run_until_complete(engine.run(filename, workflow, context, bucket=bucket)),
+        'completion': asyncio.Event()
+    }
+    session['completion'].set()
 
-    printer.print_output()
+    if artifact:
+        result = loop.run_until_complete(engine.get_artifact(
+            session,
+            artifact=artifact,
+            target=printer.get_target()
+        ))
+
+        if result:
+            print(result)
+    else:
+        result = loop.run_until_complete(engine.get_output(session))
+
+        printer.build_report(result)
+
+        printer.print_output()
 
 @cli.command()
 @click.option('--engine', required=True)

@@ -4,7 +4,7 @@ from autobahn.wamp.exception import ApplicationError
 from autobahn.wamp.types import PublishOptions
 import logging
 import requests
-from ltldoorstep.metadata import DoorstepContext
+from ltldoorstep.context import DoorstepContext
 from ltldoorstep.ini import DoorstepIni
 from ltldoorstep.file import make_file_manager
 from retry import api as retry_api

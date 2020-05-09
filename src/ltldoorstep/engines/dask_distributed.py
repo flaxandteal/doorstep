@@ -32,10 +32,10 @@ class DaskDistributedEngine(Engine):
         session['data-filename'] = filename
         session['data-content'] = content
 
-    def add_processor(self, filename, content, metadata, session):
+    def add_processor(self, filename, content, context, session):
         session['workflow-filename'] = filename
         session['workflow-content'] = content
-        session['metadata'] = metadata
+        session['context'] = context
 
     def get_client(self):
         """Return a dask.distributed client, connecting if necessary."""
@@ -44,27 +44,27 @@ class DaskDistributedEngine(Engine):
             self.client = make_client(self.client_url)
         return self.client
 
-    async def run(self, filename, workflow_module, metadata, bucket=None):
+    async def run(self, filename, workflow_module, context, bucket=None):
         """Start the execution process over the cluster."""
 
-        return await self._run(filename, workflow_module, metadata, bucket, self.get_client())
+        return await self._run(filename, workflow_module, context, bucket, self.get_client())
 
     async def monitor_pipeline(self, session):
         workflow_module = session['workflow-filename']
         filename = session['data-filename']
-        metadata = session['metadata']
+        context = session['context']
         content = {
             workflow_module: session['workflow-content'].decode('utf-8'),
             filename: session['data-content'].decode('utf-8'),
         }
 
         with make_file_manager(content=content) as file_manager:
-            result = await self.run(filename, workflow_module, metadata)
+            result = await self.run(filename, workflow_module, context)
 
         return result
 
     @staticmethod
-    async def _run(filename, workflow_module, metadata, bucket, client):
+    async def _run(filename, workflow_module, context, bucket, client):
         """Start the execution process over the cluster for a given client."""
 
         result = None
@@ -74,7 +74,7 @@ class DaskDistributedEngine(Engine):
 
             await client.upload_file(workflow_module)
             module_name = os.path.splitext(os.path.basename(workflow_module))[0]
-            result = await client.submit(execute, local_file, module_name, metadata)
+            result = await client.submit(execute, local_file, module_name, context)
 
         return result
 

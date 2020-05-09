@@ -47,15 +47,15 @@ class DaskThreadedEngine(Engine):
         if type(ini) is dict:
             ini = DoorstepIni.from_dict(ini)
 
-        for uid, metadata in ini.definitions.items():
+        for uid, context in ini.definitions.items():
             filename = None
             content = None
-            if metadata.module:
-                filename = metadata.module
-                if metadata.module in modules:
-                    content = modules[metadata.module]
+            if context.module:
+                filename = context.module
+                if context.module in modules:
+                    content = modules[context.module]
                 else:
-                    error_msg = _("Module content missing from processor %s") % metadata.module
+                    error_msg = _("Module content missing from processor %s") % context.module
                     logging.error(error_msg)
                     raise RuntimeError(error_msg)
 
@@ -63,7 +63,7 @@ class DaskThreadedEngine(Engine):
                 'name' : uid,
                 'filename': filename,
                 'content': content,
-                'metadata': metadata
+                'context': context
             })
 
         logging.warn("Processor added")
@@ -118,7 +118,7 @@ class DaskThreadedEngine(Engine):
             if type(workflow_module) == bytes:
                 workflow_module = workflow_module.decode('utf-8')
 
-            metadata = processor['metadata']
+            context = processor['context']
             if not filename:
                 filename = 'data.file'
 
@@ -131,20 +131,20 @@ class DaskThreadedEngine(Engine):
                 if workflow_module:
                     mod = file_manager.get(processor_filename)
                 else:
-                    mod = try_example_processor(metadata.tag)
+                    mod = try_example_processor(context.tag)
                     if not mod:
                         raise RuntimeError(_("The requested processor had no body, nor was an example processor."))
 
                 mod = SourceFileLoader('custom_processor', mod)
                 local_file = file_manager.get(filename)
-                report = dask_run(local_file, mod.load_module(), metadata, compiled=False)
+                report = dask_run(local_file, mod.load_module(), context, compiled=False)
                 reports.append(report)
         report = combine_reports(*reports)
 
         return report
 
     @staticmethod
-    async def run(filename, workflow_module, metadata, bucket=None):
+    async def run(filename, workflow_module, context, bucket=None):
         """Start the multi-threaded execution process."""
 
         mod = SourceFileLoader('custom_processor', workflow_module)
@@ -152,7 +152,7 @@ class DaskThreadedEngine(Engine):
         result = None
         with make_file_manager(bucket) as file_manager:
             local_file = file_manager.get(filename)
-            result = dask_run(local_file, mod.load_module(), metadata)
+            result = dask_run(local_file, mod.load_module(), context)
         return result
 
     @contextmanager

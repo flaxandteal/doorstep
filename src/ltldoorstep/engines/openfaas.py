@@ -29,7 +29,7 @@ def _check_allowed_functions(x, fn, allowed_functions):
             return x, function
 
         # We allow matching by a pattern, between two slashes - in which case the OpenFaaS function
-        # must also follow its own pattern, and match the metadata.docker['image'] (an abuse, as this
+        # must also follow its own pattern, and match the context.docker['image'] (an abuse, as this
         # must then actually be the OpenFaaS function name, not the docker image for the function)
         if {tag[0], tag[-1]} == {'/'} and re.match(tag[1:-1], x) and fn:
             if {function[0], function[-1]} == {'/'} and re.match(function[1:-1], fn):
@@ -93,15 +93,15 @@ class OpenFaaSEngine(Engine):
         if 'processors' not in session:
             session['processors'] = []
 
-        for uid, metadata in ini.definitions.items():
+        for uid, context in ini.definitions.items():
             filename = None
             content = None
-            if metadata.module:
-                filename = metadata.module
-                if metadata.module in modules:
-                    content = modules[metadata.module]
+            if context.module:
+                filename = context.module
+                if context.module in modules:
+                    content = modules[context.module]
                 else:
-                    error_msg = _("Module content missing from processor %s") % metadata.module
+                    error_msg = _("Module content missing from processor %s") % context.module
                     logging.error(error_msg)
                     raise RuntimeError(error_msg)
 
@@ -109,22 +109,22 @@ class OpenFaaSEngine(Engine):
                 'name' : uid,
                 'filename': filename,
                 'content': content,
-                'metadata': metadata
+                'context': context
             })
 
-    async def run(self, filename, workflow_module, metadata, bucket=None):
+    async def run(self, filename, workflow_module, context, bucket=None):
         """Start the execution process over the cluster."""
 
         processors = [{
             'name': workflow_module,
-            'metadata': metadata,
+            'context': context,
             'filename': filename,
             'content': filename
         }]
 
         target = 'doorstep-no-session-%s' % str(uuid.uuid4())
         report = await self._run(filename, filename, processors, self.openfaas_host, self.openfaas_cred, self.allowed_functions, target=target)
-        return report.compile(filename, metadata)
+        return report.compile(filename, context)
 
     async def monitor_pipeline(self, session):
         session['completion'] = asyncio.Event()
@@ -218,11 +218,11 @@ class OpenFaaSEngine(Engine):
                 status_code=str(status_code)
             )
 
-        return content
+        return status_code, content
 
     @staticmethod
     async def _get_functions(openfaas_host, openfaas_cred, allowed_functions={}):
-        content = await OpenFaaSEngine._make_openfaas_call(
+        status_code, content = await OpenFaaSEngine._make_openfaas_call(
             openfaas_host,
             openfaas_cred,
             'ltl-openfaas-status',
@@ -255,14 +255,14 @@ class OpenFaaSEngine(Engine):
     async def _run(filename, url, processors, openfaas_host, openfaas_cred, allowed_functions={}, target=None):
         reports = []
         for processor in processors:
-            metadata = processor['metadata']
+            context = processor['context']
 
-            tag, function = _check_allowed_functions(metadata.tag, metadata.docker['image'], allowed_functions)
+            tag, function = _check_allowed_functions(context.tag, context.docker['image'], allowed_functions)
             if not tag:
-                tag, function = _check_allowed_functions(processor['name'], metadata.docker['image'], allowed_functions)
+                tag, function = _check_allowed_functions(processor['name'], context.docker['image'], allowed_functions)
 
             if not tag:
-                error_msg = _("Could not find {} or {} in allowed processors for OpenFaaS engine.").format(metadata.tag, processor['name'])
+                error_msg = _("Could not find {} or {} in allowed processors for OpenFaaS engine.").format(context.tag, processor['name'])
                 error_msg += _("\nUpdate .ltldoorstep.yml to add more")
                 raise RuntimeError(error_msg)
 
@@ -274,16 +274,33 @@ class OpenFaaSEngine(Engine):
                 'filename': url,
                 'workflow': tag,
                 'target': report_target,
-                'metadata': json.dumps(metadata.to_dict()),
+                'context': json.dumps(context.to_dict()),
             }
 
-            content = await OpenFaaSEngine._make_openfaas_call(
+            status_code, content = await OpenFaaSEngine._make_openfaas_call(
                 openfaas_host,
                 openfaas_cred,
                 function,
                 data=data,
                 processor_name=processor['name']
             )
+
+            if status_code != 200:
+                message = _("OpenFaaS call did not return status 200")
+
+                logging.error(message)
+                logging.error(content)
+
+                try:
+                    content = Report.parse(content)
+                except:
+                    pass
+
+                raise LintolDoorstepException(
+                    RuntimeError(_("OpenFaaS call did not return status 200")),
+                    processor=processor['name'],
+                    message=message + '\n\n' + str(content)
+                )
 
             try:
                 report = Report.parse(content)

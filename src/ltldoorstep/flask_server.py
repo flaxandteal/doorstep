@@ -13,16 +13,16 @@ class Processor(Resource):
     def post(self):
         parse = reqparse.RequestParser()
         parse.add_argument('script', type=werkzeug.FileStorage, location='files')
-        parse.add_argument('metadata')
+        parse.add_argument('context')
         args = parse.parse_args()
 
         content = args['script'].read()
         filename = args['script'].filename
-        metadata = json.loads(args['metadata'])
+        context = json.loads(args['context'])
 
         module_name = os.path.splitext(os.path.basename(filename))[0]
 
-        app.engine.add_processor(module_name, content, metadata, app.session)
+        app.engine.add_processor(module_name, content, context, app.session)
         return 'Success'
 
 
