@@ -63,6 +63,9 @@ class DoorstepIni:
             kwargs['lang'] = dct['lang']
             context['lang'] = dct['lang']
 
+        if 'settings' in dct:
+            context['settings'] = dct['settings']
+
         if 'definitions' in dct:
             kwargs['definitions'] = {}
             for d, processor in dct['definitions'].items():

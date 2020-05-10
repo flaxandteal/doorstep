@@ -39,7 +39,7 @@ class DoorstepProcessor:
 
             prnt.build_report(report)
 
-            return prnt.get_output()
+            return prnt.print_output()
         else:
             raise NotImplementedError("Attempt to find unknown artifact {}".format(artifact))
 
