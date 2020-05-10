@@ -176,7 +176,7 @@ class Report(Serializable):
     def __repr__(self):
         return '(|Report: %s|)' % str(self)
 
-    def __init__(self, processor, info, filename='', context=None, headers=None, encoding='utf-8', time=0., row_count=None, supplementary=None, issues=None, issues_skipped=None):
+    def __init__(self, processor, info, filename='', context=None, headers=None, encoding='utf-8', time=0., row_count=None, supplementary=None, issues=None, issues_skipped=None, artifacts=None):
         if issues is None:
             self.issues = {
                 logging.ERROR: [],
@@ -201,14 +201,23 @@ class Report(Serializable):
         if issues_skipped is None:
             issues_skipped = {}
 
+        if artifacts is None:
+            artifacts = {}
+
         self.properties = {
             'row-count': row_count,
             'time': time,
             'encoding': encoding,
             'preset': self.get_preset(),
             'issues-skipped': issues_skipped,
+            'artifacts': artifacts,
             'headers': headers
         }
+
+    def record_artifact(self, key, uri):
+        if self.processor:
+            key = '{}#{}'.format(self.processor, key)
+        self.properties['artifacts'][key] = uri
 
     def get_issues(self, level=None):
         if level:
@@ -243,6 +252,7 @@ class Report(Serializable):
         time = None
         encoding = None
         issues_skipped = {}
+        artifacts = {}
         headers = None
 
         context = None
@@ -282,6 +292,7 @@ class Report(Serializable):
         supplementary = dictionary['supplementary']
         cls = get_report_class_from_preset(dictionary['preset'])
         issues_skipped = dictionary['issues-skipped'] if 'issues-skipped' in dictionary else {}
+        artifacts = dictionary['artifacts'] if 'artifacts' in dictionary else {}
 
         return cls(
             '(unknown)',
@@ -294,7 +305,8 @@ class Report(Serializable):
             headers=headers,
             context=context,
             issues=issues,
-            issues_skipped=issues_skipped
+            issues_skipped=issues_skipped,
+            artifacts=artifacts
         )
 
     def update(self, additional):
@@ -311,6 +323,8 @@ class Report(Serializable):
             self.properties['issues-skipped'],
             additional.properties['issues-skipped']
         )
+
+        self.properties['artifacts'].update(additional.properties['artifacts'])
 
     @staticmethod
     def table_string_from_issue(issue):
@@ -361,6 +375,7 @@ class Report(Serializable):
                 issues_by_table[self.table_string_from_issue(issue)][level].append(issue)
 
         skipped = _merge_issues_skipped(skipped, self.properties['issues-skipped'], recounting=True)
+        artifacts = self.properties['artifacts']
 
         tables = []
         total_items = {
@@ -412,6 +427,7 @@ class Report(Serializable):
             },
             'valid': total_valid,
             'issues-skipped': skipped,
+            'artifacts': artifacts,
             'tables': tables,
             'filename': filename,
             'preset': self.get_preset(),
@@ -459,6 +475,7 @@ def properties_from_report(report):
         'encoding': table['encoding'],
         'preset': report['preset'],
         'issues-skipped': report['issues-skipped'],
+        'artifacts': report['artifacts'],
         'headers': table['headers']
     }
 
