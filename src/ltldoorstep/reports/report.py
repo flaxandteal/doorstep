@@ -191,6 +191,8 @@ class Report(Serializable):
             context = {}
         if supplementary is None:
             supplementary = []
+        if artifacts is None:
+            artifacts = {}
 
         self.processor = processor
         self.info = info
