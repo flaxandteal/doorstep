@@ -7,6 +7,7 @@ import json
 import os
 from ..context import DoorstepContext
 from ..encoders import Serializable
+from ..artifact import ArtifactRecord, ArtifactType
 
 # Delta allows us to avoid adding totals together and
 # double-counting existing, kept, rows
@@ -197,6 +198,7 @@ class Report(Serializable):
         self.filename = filename
         self.context = context
         self.processors_count = {}
+        self.artifacts = artifacts
 
         if issues_skipped is None:
             issues_skipped = {}
@@ -210,14 +212,13 @@ class Report(Serializable):
             'encoding': encoding,
             'preset': self.get_preset(),
             'issues-skipped': issues_skipped,
-            'artifacts': artifacts,
             'headers': headers
         }
 
-    def record_artifact(self, key, uri):
+    def record_artifact(self, key, uri, typ: ArtifactType):
         if self.processor:
             key = '{}#{}'.format(self.processor, key)
-        self.properties['artifacts'][key] = uri
+        self.artifacts[key] = ArtifactRecord(uri=uri, mime=typ.mime, is_bytes=typ.is_bytes)
 
     def get_issues(self, level=None):
         if level:
@@ -292,7 +293,7 @@ class Report(Serializable):
         supplementary = dictionary['supplementary']
         cls = get_report_class_from_preset(dictionary['preset'])
         issues_skipped = dictionary['issues-skipped'] if 'issues-skipped' in dictionary else {}
-        artifacts = dictionary['artifacts'] if 'artifacts' in dictionary else {}
+        artifacts = {k: ArtifactRecord(**v) for k, v in dictionary['artifacts'].items()} if 'artifacts' in dictionary else {}
 
         return cls(
             '(unknown)',
@@ -324,7 +325,7 @@ class Report(Serializable):
             additional.properties['issues-skipped']
         )
 
-        self.properties['artifacts'].update(additional.properties['artifacts'])
+        self.artifacts.update(additional.artifacts)
 
     @staticmethod
     def table_string_from_issue(issue):
@@ -375,7 +376,7 @@ class Report(Serializable):
                 issues_by_table[self.table_string_from_issue(issue)][level].append(issue)
 
         skipped = _merge_issues_skipped(skipped, self.properties['issues-skipped'], recounting=True)
-        artifacts = self.properties['artifacts']
+        artifacts = {k: {'uri': a.uri, 'is_bytes': a.is_bytes, 'mime': a.mime} for k, a in self.artifacts.items()}
 
         tables = []
         total_items = {
@@ -475,7 +476,6 @@ def properties_from_report(report):
         'encoding': table['encoding'],
         'preset': report['preset'],
         'issues-skipped': report['issues-skipped'],
-        'artifacts': report['artifacts'],
         'headers': table['headers']
     }
 

@@ -267,7 +267,7 @@ class OpenFaaSEngine(Engine):
                 raise RuntimeError(error_msg)
 
             if target:
-                report_target = os.path.join(target, 'report-%s.json' % str(uuid.uuid4()))
+                report_target = os.path.join(target, processor['name'])
             else:
                 report_target = None
             data = {

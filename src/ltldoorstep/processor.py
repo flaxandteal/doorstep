@@ -4,6 +4,8 @@ import logging
 from .reports.report import Report, get_report_class_from_preset, combine_reports
 from .context import DoorstepContext
 from .printer import get_printer, get_printer_types
+from .artifact import ArtifactType
+
 
 class DoorstepProcessor:
     preset = None
@@ -22,8 +24,22 @@ class DoorstepProcessor:
             context = DoorstepContext.from_dict(context)
         self._context = context
 
-    def artifacts_to_be_requested(self, artifacts):
+    def set_artifacts_to_be_requested(self, artifacts):
         self.artifacts_expected = artifacts
+
+    def get_artifact_type(self, artifact) -> ArtifactType:
+        if artifact.startswith('report:'):
+            report_type = artifact.replace('report:', '')
+
+            printer_types = get_printer_types()
+            if not report_type in printer_types:
+                raise RuntimeError(_("Report type must be one of: {}").format(', '.join(printer_types)))
+
+            prnt = get_printer(report_type, debug=False, target=None)
+
+            return prnt.get_output_type()
+        else:
+            raise NotImplementedError("Attempt to find unknown artifact {} (type missing, check get_artifact_type in your processor)".format(artifact))
 
     def get_artifact(self, artifact, target=None):
         if artifact.startswith('report:'):

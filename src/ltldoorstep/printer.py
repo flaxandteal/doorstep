@@ -10,6 +10,7 @@ import tabulate
 import gettext
 from enum import Enum
 from .reports.report import Report
+from .artifact import ArtifactType
 
 
 LEVEL_MAPPING = [
@@ -61,6 +62,8 @@ class Printer:
                 target_file.write(output)
 
 class CsvPrinter(Printer):
+    output_type = ArtifactType(mime='text/csv', is_bytes=False)
+
     def __init__(self, debug=False, target=None):
         super().__init__(debug, target)
         self.grouping = OutputGrouping.NONE
@@ -175,6 +178,8 @@ class CsvPrinter(Printer):
         self._output_sections.append(output)
 
 class TermColorPrinter(Printer):
+    output_type = ArtifactType(mime='text/plain', is_bytes=False)
+
     def print_status_output(self, status):
         fn_table = []
 
@@ -251,6 +256,8 @@ class TermColorPrinter(Printer):
 
 
 class JsonPrinter(Printer):
+    output_type = ArtifactType(mime='application/json', is_bytes=False)
+
     def print_status_output(self, status):
         return json.dumps(status)
 
@@ -262,6 +269,8 @@ class JsonPrinter(Printer):
         self._output = json.dumps(result_sets)
 
 class HtmlPrinter(Printer):
+    output_type = ArtifactType(mime='text/html', is_bytes=False)
+
     def print_status_output(self, status):
         output = status
 
