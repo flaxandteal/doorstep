@@ -11,5 +11,5 @@ class ArtifactType:
 class ArtifactRecord:
     '''Class for tracking an actual artifact'''
     uri: str
-    typ: ArtifactType
+    is_bytes: bool
     mime: str = None
