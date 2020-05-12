@@ -122,7 +122,7 @@ class OpenFaaSEngine(Engine):
             'content': filename
         }]
 
-        target = 'doorstep-no-session-%s' % str(uuid.uuid4())
+        target = 'doorstep/doorstep-no-session-%s' % str(uuid.uuid4())
         report = await self._run(filename, filename, processors, self.openfaas_host, self.openfaas_cred, self.allowed_functions, target=target)
         return report.compile(filename, context)
 
@@ -133,7 +133,8 @@ class OpenFaaSEngine(Engine):
             # await session['completion'].acquire()
             data = await session['queue'].get()
             try:
-                result = await self._run(data['filename'], data['content'], session['processors'], self.openfaas_host, self.openfaas_cred, self.allowed_functions, target=session['name'])
+                target = 'doorstep/{}'.format(session['name'])
+                result = await self._run(data['filename'], data['content'], session['processors'], self.openfaas_host, self.openfaas_cred, self.allowed_functions, target=target)
                 session['result'] = result
             except Exception as error:
                 __, __, exc_traceback = sys.exc_info()
