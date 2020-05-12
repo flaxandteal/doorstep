@@ -30,10 +30,17 @@ class OutputGrouping(Enum):
     LEVEL = 3
 
 class Printer:
+    output_type = None
+
     def __init__(self, debug=False, target=None):
         self._output_sections = []
         self._debug = debug
         self._target = target
+
+    def get_output_type(self):
+        if not self.output_type:
+            raise NotImplementedError("No output type provided for this printer")
+        return self.output_type
 
     def print_status_output(self, status):
         raise NotImplementedError("No report builder implemented for this printer")
