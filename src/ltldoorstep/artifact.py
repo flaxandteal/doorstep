@@ -5,6 +5,7 @@ class ArtifactType:
     '''Class for tracking a (potential) artifact's nature'''
     is_bytes: bool
     mime: str = None
+    encoding: str = 'utf-8'
 
 
 @dataclass
@@ -13,3 +14,4 @@ class ArtifactRecord:
     uri: str
     is_bytes: bool
     mime: str = None
+    encoding: str = 'utf-8'

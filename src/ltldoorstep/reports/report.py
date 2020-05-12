@@ -220,7 +220,7 @@ class Report(Serializable):
     def record_artifact(self, key, uri, typ: ArtifactType):
         if self.processor:
             key = '{}#{}'.format(self.processor, key)
-        self.artifacts[key] = ArtifactRecord(uri=uri, mime=typ.mime, is_bytes=typ.is_bytes)
+        self.artifacts[key] = ArtifactRecord(uri=uri, mime=typ.mime, is_bytes=typ.is_bytes, encoding=typ.encoding)
 
     def get_issues(self, level=None):
         if level:
@@ -378,7 +378,7 @@ class Report(Serializable):
                 issues_by_table[self.table_string_from_issue(issue)][level].append(issue)
 
         skipped = _merge_issues_skipped(skipped, self.properties['issues-skipped'], recounting=True)
-        artifacts = {k: {'uri': a.uri, 'is_bytes': a.is_bytes, 'mime': a.mime} for k, a in self.artifacts.items()}
+        artifacts = {k: {'uri': a.uri, 'is_bytes': a.is_bytes, 'mime': a.mime, 'encoding': a.encoding} for k, a in self.artifacts.items()}
 
         tables = []
         total_items = {
