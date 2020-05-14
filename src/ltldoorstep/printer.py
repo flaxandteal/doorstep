@@ -13,11 +13,11 @@ from .reports.report import Report
 from .artifact import ArtifactType
 
 
-LEVEL_MAPPING = [
-    logging.ERROR,
-    logging.WARNING,
-    logging.INFO
-]
+LEVEL_MAPPING = {
+    logging.ERROR: 'ERR',
+    logging.WARNING: 'WNG',
+    logging.INFO: 'INF'
+}
 
 class OutputSorting(Enum):
     LOCATION = 1
@@ -136,6 +136,7 @@ class CsvPrinter(Printer):
             location_casts = [str]
 
         headings = location_headings + [
+            'Level',
             'Processor',
             'Code',
         ]
@@ -149,15 +150,41 @@ class CsvPrinter(Printer):
             groups = {'': all_issues}
             get_group = lambda item, level: all_issues
 
+        extra_columns = []
+        for log_level in LEVEL_MAPPING:
+            for issue in report.get_issues(log_level):
+                if 'export-columns' in issue.error_data:
+                    for col, _ in issue.error_data['export-columns']:
+                        # This avoids confusing duplication of names, but puts
+                        # the onus on the processor creator to ensure they do
+                        # not duplicate column names if they mean different things
+                        if col not in extra_columns:
+                            extra_columns.append(col)
+
+        headings += extra_columns
+
         for log_level in LEVEL_MAPPING:
             for issue in report.get_issues(log_level):
                 item = issue.get_item()
                 item_str = str(item.definition)
+
+                if 'export-columns' in issue.error_data:
+                    export_columns = {k: v for k, v in issue.error_data['export-columns']}
+                else:
+                    export_columns = {}
+
                 item_row = location(item) + [
+                    LEVEL_MAPPING[log_level],
                     issue.processor,
                     issue.code
+                ] + [issue.message] + [
+                    (
+                        export_columns[col]
+                        if col in export_columns else
+                        None
+                    )
+                    for col in extra_columns
                 ]
-                item_row += [issue.message]
                 get_group(item, log_level).append(item_row)
 
         for group in groups.values():
