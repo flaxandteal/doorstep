@@ -22,6 +22,7 @@ from ..reports.report import Report, combine_reports
 
 OPENFAAS_HOST = 'http://127.0.0.1:8084'
 FUNCTION_CONTAINER_PREFIX = '/home/user/.local/lib/python3.6/site-packages/'
+ALLOWED_ACTIONS = ['restart']
 
 def _check_allowed_functions(x, fn, allowed_functions):
     for tag, function in allowed_functions.items():
@@ -219,6 +220,7 @@ class OpenFaaSEngine(Engine):
                 status_code=str(status_code)
             )
 
+        logging.error(str(content))
         return status_code, content
 
     @staticmethod
@@ -335,3 +337,30 @@ class OpenFaaSEngine(Engine):
         }
 
         yield session
+
+    async def process_action(self, processor_tag, processor_definition, action):
+        tag, function = _check_allowed_functions(processor_tag, processor_definition['docker']['image'], self.allowed_functions)
+
+        if not tag:
+            error_msg = _("Could not find {} in allowed processors for OpenFaaS engine.").format(processor_tag)
+            error_msg += _("\nUpdate .ltldoorstep.yml to add more")
+            raise RuntimeError(error_msg)
+
+        if action not in ALLOWED_ACTIONS:
+            raise RuntimeError(_("Doorstep does not allow this action: {action}").format(action))
+
+        status_code, content = await OpenFaaSEngine._make_openfaas_call(
+            self.openfaas_host,
+            self.openfaas_cred,
+            'ltl-openfaas-manage',
+            data={
+                'function': function,
+                'tag': tag,
+                'action': action
+            },
+            processor_name=f'PROCESSOR-ACTION-{action.upper()}'
+        )
+
+        logging.info('%s %s', str(content), str(status_code))
+
+        return content

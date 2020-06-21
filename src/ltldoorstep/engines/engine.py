@@ -34,6 +34,9 @@ class Engine:
     async def get_output(self, session):
         raise NotImplementedError("Function must be implemented")
 
+    async def process_action(self, processor_tag, processor_definition, action, session):
+        raise NotImplementedError("Function must be implemented")
+
     @contextmanager
     def make_session(self):
         raise NotImplementedError("Function must be implemented")

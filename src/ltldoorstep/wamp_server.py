@@ -71,6 +71,14 @@ class ProcessorResource():
 
         return self._engine.add_processor(processors, ini, session)
 
+    async def action(self, action, processor_tag, processor_definition, session):
+        logging.warn(_("Action posted"))
+        logging.warn(processor_tag)
+        logging.warn(str(processor_definition))
+        logging.warn(action)
+
+        return await self._engine.process_action(processor_tag, processor_definition, action)
+
 class DataResource():
     def __init__(self, engine, config):
         self._engine = engine
@@ -145,6 +153,7 @@ class DoorstepComponent(ApplicationSession):
 
     async def wrap_register(self, endpoint, callback):
         uri = 'com.ltldoorstep.{server}.{endpoint}'.format(server=self._id, endpoint=endpoint)
+        logging.warn(uri)
 
         async def _routine(session, *args, **kwargs):
             try:
@@ -194,6 +203,7 @@ class DoorstepComponent(ApplicationSession):
             RegisterOptions(invoke='roundrobin')
         )
         await self.wrap_register('processor.post', self._resource_processor.post)
+        await self.wrap_register('processor.action', self._resource_processor.action)
         await self.wrap_register('data.post', self._resource_data.post)
         await self.wrap_register('report.get', self._resource_report.get)
 

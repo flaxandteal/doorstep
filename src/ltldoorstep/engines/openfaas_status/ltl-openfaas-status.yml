@@ -12,3 +12,13 @@ functions:
       exec_timeout: 600s
     secrets:
     - authentication-secret
+  ltl-openfaas-manage:
+    lang: python3
+    handler: ./ltl-openfaas-manage
+    image: flaxandteal/ltl-openfaas-manage:latest
+    environment: # move to secrets
+      read_timeout: 600s
+      write_timeout: 600s
+      exec_timeout: 600s
+    secrets:
+    - authentication-secret
