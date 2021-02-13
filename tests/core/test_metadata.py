@@ -1,32 +1,41 @@
 """Testing for metadata functionality"""
 import pytest
-from ltldoorstep.metadata import DoorstepContext
+from ltldoorstep.context import DoorstepContext
 import logging
 
 
 def test_can_create_metadata():
     """testing to see if we can create metadata objects"""
 
-    metadata = DoorstepContext("image", "revision", "{test: 3}")
-    # print(metadata.docker['image'])
+    metadata = DoorstepContext("image", "revision", docker_image="test", docker_revision="3")
     # assert metadata.docker["image"] == "image"
-    assert metadata.docker["image"] == "{test: 3}"
+    assert metadata.docker["image"] == "test"
     # assert metadata.docker["revision"] == "revision"
-    assert metadata.docker["revision"] is None
+    assert metadata.docker["revision"] == "3"
     # assert metadata.package == {"test": 3}
     assert metadata.package is None
 
 def test_can_convert_metadata_to_dict():
     """testing to see if we can create metadata objects"""
-    metadata = DoorstepContext("image", "revision", "{test: 3}")
+    metadata = DoorstepContext(docker_image="image", docker_revision="revision", context_package="{test: 3}")
     assert metadata.to_dict() == {
-        "docker": {
-            "image": "image",
-            "revision": "revision"
+        'definition': {
+            'docker': {
+                'image': 'image',
+                'revision': 'revision'
+            }
         },
-        "context": {
-            "package": {"test": 3}
-        }
+        'lang': None,
+        'context': {
+            'package': "{test: 3}",
+            'resource': 'null',
+            'format': None
+        },
+        'settings': {},
+        'configuration': {},
+        'supplementary': None,
+        'tag': None,
+        'module': None,
     }
 
 def test_can_set_package():

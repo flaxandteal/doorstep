@@ -5,6 +5,7 @@ import logging
 from unittest.mock import Mock, patch, mock_open
 import pytest
 import asyncio
+import asynctest
 from ltldoorstep.engines.docker import DockerEngine
 from ltldoorstep.processor import DoorstepProcessor
 from ltldoorstep.reports.tabular import TabularReport
@@ -68,11 +69,19 @@ def test_can_run_workflow(engine):
 
     loop = asyncio.get_event_loop()
     session = {}
+    adkr = Mock()
+    actr = Mock()
+    actr.wait = asynctest.CoroutineMock()
+    adkr.close = asynctest.CoroutineMock()
+    adkr.containers.get = asynctest.CoroutineMock(return_value=actr)
+    aiodocker = Mock(return_value=adkr)
 
     with patch('ltldoorstep.engines.docker.open', mopen) as _, \
+            patch('ltldoorstep.engines.docker.aiodocker.Docker', aiodocker), \
             patch('ltldoorstep.engines.docker.docker', docker), \
             patch('ltldoorstep.engines.docker.requests', requests):
         engine.add_processor({'test-processor': 'import python'}, metadata, session)
-        result = loop.run_until_complete(engine.run(filename, module, metadata))
+        report = loop.run_until_complete(engine.run(filename, module, metadata))
 
+    result = report.__serialize__()
     assert result['tables'][0]['errors'][0]['processor'] == 'testing-processor'

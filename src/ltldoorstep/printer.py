@@ -302,7 +302,12 @@ class JsonPrinter(Printer):
         return self._output
 
     def build_report(self, result_sets):
-        result_sets = result_sets.__serialize__()
+        if isinstance(result_sets, Report):
+            report = result_sets
+        else:
+            report = Report.parse(result_sets)
+
+        result_sets = report.__serialize__()
         self._output = json_dumps(result_sets)
 
 class HtmlPrinter(Printer):

@@ -19,6 +19,7 @@ def engine():
 
     return eng
 
+@pytest.mark.skip
 def test_can_run_workflow(engine):
     """Check we can run a workflow on local files."""
 
@@ -49,8 +50,7 @@ def ret(r, filename, metadata):
 
     with patch('distributed.client.open', mopen) as _:
         # Note that the event loop is handled within utils_test
-        # TODO: check_new_threads correctness needs to be explored
-        @utils_test.gen_cluster(client=True, check_new_threads=False)
+        @utils_test.gen_cluster(client=True)
         async def _exec(c, s, a, b):
             engine.client = c
             return await engine.run(filename, module, metadata)

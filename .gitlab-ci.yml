@@ -31,9 +31,7 @@ build:
 test:
   stage: test
   script:
-  - pwd
-  #- docker run --entrypoint php $CONTAINER_IMAGE vendor/phpunit/phpunit/phpunit
-  #- docker run --entrypoint vendor/behat/behat/bin/behat $CONTAINER_ARTISAN_IMAGE
+  - docker run --entrypoint python3 $CONTAINER_IMAGE setup.py test
   dependencies: []
 
 release:

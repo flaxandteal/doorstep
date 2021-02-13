@@ -187,9 +187,9 @@ class DockerEngine(Engine):
 
                 os.makedirs(processor_root)
 
-                if context.supplementary:
+                if 'supplementary' in context:
                     supplementary_internal = {}
-                    for i, (key, supplementary) in enumerate(context.supplementary.items()):
+                    for i, (key, supplementary) in enumerate(context['supplementary'].items()):
                         error = _("(unknown error)")
                         if supplementary.startswith('error://'):
                             error = supplementary[len('error://'):]
@@ -211,10 +211,10 @@ class DockerEngine(Engine):
                             'location': os.path.join('/pfs', 'processors', processor['name'], supplementary_basename)
                         }
 
-                    context.supplementary = supplementary_internal
+                    context['supplementary'] = supplementary_internal
 
                 with open(os.path.join(processor_root, 'context.json'), 'w') as context_file:
-                    json.dump(context.to_dict(), context_file)
+                    json.dump(context, context_file)
 
                 if processor['filename']:
                     shutil.copy(file_manager.get(processor['filename']), os.path.join(processor_root, processor['filename']))
@@ -227,64 +227,66 @@ class DockerEngine(Engine):
                 docker_revision = 'latest'
                 lang = 'C.UTF-8' # TODO: more sensible default
 
-                if context.docker['image']:
-                    docker_image = context.docker['image']
-                if context.docker['revision']:
-                    docker_revision = context.docker['revision']
+                for code, definition in context['definitions'].items():
+                    definition = definition['definition']
+                    if definition['docker']['image']:
+                        docker_image = definition['docker']['image']
+                    if definition['docker']['revision']:
+                        docker_revision = definition['docker']['revision']
 
-                if context.lang:
-                    # TODO: check lang is valid
-                    lang = context.lang
+                    if context['lang']:
+                        # TODO: check lang is valid
+                        lang = context['lang']
 
-                envs = {
-                    'LANG': lang,
-                    'LINTOL_PROCESSOR_DIRECTORY': '/pfs/processors/%s' % processor['name'],
-                    'LINTOL_OUTPUT_FILE': '/pfs/out/raw/%s.json' % processor['name'],
-                    'LINTOL_CONTEXT': '/pfs/processors/%s/context.json' % processor['name'],
-                    'LINTOL_INPUT_DATA': '/pfs/data',
-                    'LINTOL_DATA_FILE': data_basename
-                }
-                report_files.append(os.path.join(out_root, 'raw', '%s.json' % processor['name']))
+                    envs = {
+                        'LANG': lang,
+                        'LINTOL_PROCESSOR_DIRECTORY': '/pfs/processors/%s' % processor['name'],
+                        'LINTOL_OUTPUT_FILE': '/pfs/out/raw/%s.json' % processor['name'],
+                        'LINTOL_CONTEXT': '/pfs/processors/%s/context.json' % processor['name'],
+                        'LINTOL_INPUT_DATA': '/pfs/data',
+                        'LINTOL_DATA_FILE': data_basename
+                    }
+                    report_files.append(os.path.join(out_root, 'raw', '%s.json' % processor['name']))
 
-                client = docker.from_env()
-                mounts = [
-                    docker.types.Mount('/pfs', mounted_dir, type='bind')
-                ]
+                    client = docker.from_env()
+                    mounts = [
+                        docker.types.Mount('/pfs', mounted_dir, type='bind')
+                    ]
 
-                if bind_ltldoorstep_module:
-                    ltldoorstep_root_dir = os.path.join(
-                        os.path.dirname(__file__),
-                        '..',
-                        '..',
-                        '..'
-                    )
-                    mounts.append(docker.types.Mount(
-                        '/doorstep',
-                        ltldoorstep_root_dir,
-                        type='bind'
-                    ))
+                    if bind_ltldoorstep_module:
+                        ltldoorstep_root_dir = os.path.join(
+                            os.path.dirname(__file__),
+                            '..',
+                            '..',
+                            '..'
+                        )
+                        mounts.append(docker.types.Mount(
+                            '/doorstep',
+                            ltldoorstep_root_dir,
+                            type='bind'
+                        ))
 
-                try:
-                    ctr = client.containers.run(
-                        '%s:%s' % (docker_image, docker_revision),
-                        environment=envs,
-                        mounts=mounts,
-                        user=os.getuid(),
-                        network_mode='none',
-                        cap_drop='ALL',
-                        detach=True
-                    )
-                except docker.errors.ContainerError as error:
-                    doorstep_exception = LintolDoorstepContainerException(
-                        error,
-                        processor=docker_image
-                    )
-                    raise doorstep_exception
+                    try:
+                        ctr = client.containers.run(
+                            '%s:%s' % (docker_image, docker_revision),
+                            environment=envs,
+                            mounts=mounts,
+                            user=os.getuid(),
+                            network_mode='none',
+                            cap_drop='ALL',
+                            detach=True
+                        )
+                    except docker.errors.ContainerError as error:
+                        doorstep_exception = LintolDoorstepContainerException(
+                            error,
+                            processor=docker_image
+                        )
+                        raise doorstep_exception
 
-                adkr = aiodocker.Docker()
-                actr = await adkr.containers.get(ctr.name)
-                await actr.wait()
-                await adkr.close()
+                    adkr = aiodocker.Docker()
+                    actr = await adkr.containers.get(ctr.name)
+                    await actr.wait()
+                    await adkr.close()
 
             reports = []
             for report_file in report_files:

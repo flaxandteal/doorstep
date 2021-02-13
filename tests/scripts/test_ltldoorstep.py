@@ -25,37 +25,6 @@ def fake_ckan():
         sys.modules['ckanapi'] = mod
 
 
-def test_crawl(runner):
-    requests = Mock()
-    file_manager = Mock()
-    sc.engines['test'] = Mock()
-    run = asynctest.CoroutineMock(return_value=TabularReport('foo', 'bar').compile())
-    sc.engines['test'].return_value = Mock()
-    sc.engines['test'].return_value.run = run
-
-    @contextlib.contextmanager
-    def make_file_manager(content):
-        yield file_manager
-
-    with fake_ckan() as ckan, \
-            patch('ltldoorstep.scripts.ltldoorstep.requests', requests), \
-            patch('ltldoorstep.scripts.ltldoorstep.make_file_manager', make_file_manager):
-        client = Mock()
-        client.action.resource_search.return_value = {
-            'results': [{'url': 'https://ckan.example.net/test'}]
-        }
-        ckan.RemoteCKAN.return_value = client
-        result = runner.invoke(sc.cli, [
-            '--output', 'json',
-            '--debug', 'crawl',
-            'test.py',
-            '--url', 'https://ckan.example.com',
-            '--engine', 'test'
-        ])
-
-    print(result.output)
-    assert result.exit_code == 0
-
 
 def test_process(runner):
     sc.engines['test'] = Mock()
