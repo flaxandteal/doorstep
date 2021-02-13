@@ -16,14 +16,12 @@ stages:
 services:
 - docker:18.09.7-dind
 
-before_script:
-  - echo "Registering with token $CI_BUILD_TOKEN"
-  - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
-
 build:
   stage: build
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
+  before_script:
+    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
   script:
   - docker build -f Dockerfile -t $CONTAINER_IMAGE .
   - docker push $CONTAINER_IMAGE
@@ -49,6 +47,8 @@ test:
 
 release:
   stage: release
+  before_script:
+    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
   script:
   # NGINX
   - docker pull $CONTAINER_IMAGE
