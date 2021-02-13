@@ -1,10 +1,66 @@
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/renderjson@1.4.0/renderjson.min.js"></script>
     <script>
+      class Annotation {
+        constructor(a) {
+          this._ann = a;
+        }
+
+        tags () {
+          return this._ann.tags;
+        }
+
+        start() {
+          return this._ann.ranges[0].startOffset;
+        }
+
+        end() {
+          return this._ann.ranges[0].endOffset;
+        }
+
+        note() {
+          return this._ann.text;
+        }
+      };
+
       var jsonFields = document.getElementsByClassName("field-json");
       Array.prototype.forEach.call(jsonFields, function (dest) {
         var jsonObj = dest.dataset.json;
-        console.log(jsonObj);
         dest.appendChild(renderjson(JSON.parse(jsonObj)));
+      });
+      function clearNote(textId) {
+        $('#' + textId + '-note').hide();
+      };
+      function setNote(textId, ann) {
+        const note = $(ann).find('.annotation-note-content').text();
+        $('#' + textId + '-note').text(note);
+        $('#' + textId + '-note').show();
+      };
+      $(function ($) {
+        for (textId in annotations) {
+          const atr = $('#' + textId);
+          atr.textId = textId;
+          atr.mouseleave(function () {
+            clearNote(this.textId)
+          }.bind(atr));
+          const text = atr.text().trim();
+          let html = '';
+          const anns = annotations[textId].map(ann => new Annotation(ann)).sort((a, b) => a.start() - b.start());
+          let lastEnd = 0;
+          for (var ix = 0; ix < anns.length; ix += 1) {
+            const ann = anns[ix];
+            const nextStart = ix < anns.length - 1 ? anns[ix + 1].start() : text.length;
+            const end = nextStart < ann.end() ? nextStart : ann.end();
+            const start = ann.start();
+
+            html += text.substr(lastEnd, start - lastEnd);
+            // NB: this is not SAFE, this is for test purposes
+            html += '<span onclick="setNote(\'' + textId + '\', this)" class="annotation ' + ann.tags().map(tag => 'annotation-tag-' + tag).join(' ') + '">' + text.substr(start, end - start) + '<span class="annotation-note-content">' + ann.note() + '</span></span>';
+            lastEnd = end;
+          }
+          html += text.substr(lastEnd, text.length - lastEnd);
+          html += '<div id="' + textId + '-note" class="annotation-note">NOTE</div>';
+          atr.html(html);
+        }
       });
     </script>
   </body>

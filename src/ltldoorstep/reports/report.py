@@ -6,8 +6,9 @@ import logging
 import json
 import os
 from ..context import DoorstepContext
-from ..encoders import Serializable
+from ..encoders import Serializable, json_dumps
 from ..artifact import ArtifactRecord, ArtifactType
+from ..aspect import get_aspect_class
 
 # Delta allows us to avoid adding totals together and
 # double-counting existing, kept, rows
@@ -44,23 +45,39 @@ class ReportItem:
         self.properties = dict(properties) if properties else None
 
     def __str__(self):
-        return json.dumps(self.render())
+        return json_dumps(self.render())
 
     def __repr__(self):
         return '(|Item: %s|)' % str(self)
 
+    @property
+    def content(self):
+        if self.properties:
+            return self.properties
+        elif self.definition:
+            return self.definition
+        return ''
+
+    # DO NOT OVERRIDE
     @classmethod
     def parse(cls, data):
+        properties = data['properties']
+        if properties:
+            for prop, value in properties.items():
+                if isinstance(value, object):
+                    properties[prop] = get_aspect_class(value['_aspect']).parse(value)
         if data['entity']:
             return cls(
                 typ=data['entity']['type'] if data['entity'] else None,
                 location=data['entity']['location'] if data['entity'] else None,
                 definition=data['entity']['definition'] if data['entity'] else None,
-                properties=data['properties']
+                properties=properties
             )
         else:
-            return cls(properties=data['properties'])
+            # FIXME: args
+            return cls(definition=None, location=None, typ=None, properties=properties)
 
+    # DO NOT OVERRIDE
     def render(self):
         return {
             'entity': {
@@ -68,7 +85,10 @@ class ReportItem:
                 'location': self.location,
                 'definition': self.definition
             },
-            'properties': self.properties
+            'properties': {
+                k: v.__serialize__() if hasattr(v, '__serialize__') else v
+                for k, v in self.properties.items()
+            } if self.properties else None
         }
 
 class ReportItemLiteral(ReportItem):
@@ -92,7 +112,7 @@ class ReportIssue:
         self.error_data = error_data
 
     def __str__(self):
-        return json.dumps(self.render())
+        return json_dumps(self.render())
 
     def __repr__(self):
         return '(|Issue: %s|)' % str(self)
@@ -107,14 +127,23 @@ class ReportIssue:
         return self.context
 
     @classmethod
-    def parse(cls, level, data):
+    def parse(cls, level, data, report_cls=None):
+        # This allows different presets to use rich items.
+        # HOWEVER, they should never affect the parsing itself or re-rendering -
+        # it cannot be guaranteed that a rich item will be consistently used
+        # in parsing.
+        if report_cls is None:
+            parse_item = ReportItem.parse
+        else:
+            parse_item = lambda item: report_cls.get_rich_item_class(item).parse(item)
+
         return cls(
             level=level,
             processor=data['processor'],
             code=data['code'],
             message=data['message'],
-            item=ReportItem.parse(data['item']),
-            context=[ReportItem.parse(c) for c in data['context']] if data['context'] else None,
+            item=parse_item(data['item']),
+            context=[parse_item(c) for c in data['context']] if data['context'] else None,
             error_data=(data['error-data'] if 'error-data' in data else {})
         )
 
@@ -140,6 +169,10 @@ class ReportIssueLiteral(ReportIssue):
 class Report(Serializable):
     preset = None
     max_issues_per_code = 100
+
+    @classmethod
+    def get_rich_item_class(cls, item):
+        return ReportItem
 
     @classmethod
     def get_preset(cls):
@@ -172,7 +205,7 @@ class Report(Serializable):
         return self.compile()
 
     def __str__(self):
-        return json.dumps(self.__serialize__())
+        return json_dumps(self.__serialize__())
 
     def __repr__(self):
         return '(|Report: %s|)' % str(self)
@@ -243,6 +276,8 @@ class Report(Serializable):
 
     @classmethod
     def parse(cls, dictionary):
+        cls = get_report_class_from_preset(dictionary['preset'])
+
         issues = {
             logging.INFO: [],
             logging.WARNING: [],
@@ -267,19 +302,19 @@ class Report(Serializable):
 
         for table in dictionary['tables']:
             issues[logging.ERROR] += [
-                ReportIssue.parse(logging.ERROR, issue)
+                ReportIssue.parse(logging.ERROR, issue, cls)
                 for issue in
                     table['errors']
             ]
 
             issues[logging.WARNING] += [
-                ReportIssue.parse(logging.WARNING, issue)
+                ReportIssue.parse(logging.WARNING, issue, cls)
                 for issue in
                     table['warnings']
             ]
 
             issues[logging.INFO] += [
-                ReportIssue.parse(logging.INFO, issue)
+                ReportIssue.parse(logging.INFO, issue, cls)
                 for issue in
                     table['informations']
             ]
@@ -293,7 +328,6 @@ class Report(Serializable):
             headers = table['headers'] if 'headers' in table else None
 
         supplementary = dictionary['supplementary']
-        cls = get_report_class_from_preset(dictionary['preset'])
         issues_skipped = dictionary['issues-skipped'] if 'issues-skipped' in dictionary else {}
         artifacts = {k: ArtifactRecord(**v) for k, v in dictionary['artifacts'].items()} if 'artifacts' in dictionary else {}
 
@@ -501,8 +535,9 @@ def combine_reports(*reports, base=None):
 
 from .geojson import GeoJSONReport
 from .tabular import TabularReport
+from .document import DocumentReport
 
 _report_class_from_preset = {
     cls.get_preset(): cls for cls in
-    (GeoJSONReport, TabularReport)
+    (GeoJSONReport, TabularReport, DocumentReport)
 }

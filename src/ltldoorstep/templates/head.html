@@ -33,6 +33,50 @@
         background: white;
       }
     </style>
-    <title></title>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7/jquery.min.js"></script>
+
+    <title>Doorstep Report</title>
+    <script>var annotations = {};</script>
+
+    <style>
+        .annotation-box {
+          position: relative;
+        }
+        .annotation {
+          padding: 2px;
+          border-radius: 3px;
+          border-bottom: 5px solid black;
+          transition: background-color 0.5s linear;
+        }
+        .annotation-note {
+          z-index: 1;
+          display: none;
+          position: absolute;
+          top: 100%;
+          margin-top: 10px;
+          left: 0px;
+          width: 90%;
+          background-color: white;
+          padding: 2%;
+          border-bottom: thick #aaa solid;
+          border-left: 3px #ccc solid;
+          box-shadow: 0 5px 5px 5px rgba(255, 255, 255, 0.3);
+        }
+        .annotation-note-content {
+          display: none;
+        }
+        .annotation-tag-WARNING {
+          border-color: #fca;
+        }
+        .annotation-tag-WARNING:hover {
+          background: #fca;
+        }
+        .annotation-tag-INFO {
+          border-color: #aaf;
+        }
+        .annotation-tag-INFO:hover {
+          background: #aaf;
+        }
+    </style>
   </head>
   <body>

@@ -17,3 +17,5 @@ minio
 aiodocker
 aiohttp
 docker
+unidecode
+chardet

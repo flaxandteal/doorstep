@@ -7,7 +7,7 @@ class Serializable:
 class DoorstepJSONEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, Serializable):
-            return json.JSONEncoder.encode(self, o.__serialize__())
+            return o.__serialize__()
 
         return json.JSONEncoder.default(self, o)
 

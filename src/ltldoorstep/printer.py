@@ -3,6 +3,7 @@ import io
 import pandas
 from collections import OrderedDict
 import re
+import uuid
 import os
 import logging
 import json
@@ -11,6 +12,8 @@ import gettext
 from enum import Enum
 from .reports.report import Report
 from .artifact import ArtifactType
+from .encoders import json_dumps
+from .aspect import AnnotatedTextAspect
 
 
 LEVEL_MAPPING = {
@@ -293,16 +296,30 @@ class JsonPrinter(Printer):
     output_type = ArtifactType(mime='application/json', is_bytes=False, encoding='utf-8')
 
     def print_status_output(self, status):
-        return json.dumps(status)
+        return json_dumps(status)
 
     def get_output(self):
         return self._output
 
     def build_report(self, result_sets):
         result_sets = result_sets.__serialize__()
-        self._output = json.dumps(result_sets)
+        self._output = json_dumps(result_sets)
 
 class HtmlPrinter(Printer):
+    class AnnotatedTextSubprinter:
+        def get_output(self, aspect):
+            uniqid = uuid.uuid4()
+            annotations = [ann.render() for ann in aspect.get_annotations()]
+            content = f"""
+            <script>
+                annotations['content-{uniqid}'] = {json_dumps(annotations)};
+            </script>
+            <div id="content-{uniqid}" class="annotation-box">
+            {aspect.plaintext}
+            </div>
+            """
+            return content
+
     output_type = ArtifactType(mime='text/html', is_bytes=False, encoding='utf-8')
 
     def print_status_output(self, status):
@@ -354,19 +371,29 @@ class HtmlPrinter(Printer):
 
             return str(location)
 
+        ann_text_ptr = self.AnnotatedTextSubprinter()
         for log_level in LEVEL_MAPPING:
             for issue in report.get_issues(log_level):
                 item = issue.get_item()
                 context = issue.get_context()
+                content = item.content
+                if isinstance(content, AnnotatedTextAspect):
+                    content = ann_text_ptr.get_output(content)
+
+                if context and report.properties['headers'] and context[0].definition:
+                    headers = zip(report.properties['headers'], context[0].definition)
+                else:
+                    headers = []
+
                 levels[log_level].append([
                     issue.processor,
                     _location_to_string(item.location),
                     issue.code,
                     issue.message.replace('\n', '<br/>'),
-                    str(item.definition) if item.definition else '',
+                    content,
                     issue.error_data,
                     item.properties if item.properties else '',
-                    ['{}:{}'.format(*p) for p in zip(report.properties['headers'], context[0].definition)] if context and context[0].definition else ''
+                    ['{}:{}'.format(*p) for p in headers]
                 ])
 
         level_labels = [
@@ -412,7 +439,7 @@ class HtmlPrinter(Printer):
                         if type(cell) is str:
                             row += '<td>{}</td>'.format(cell)
                         else:
-                            row += '<td class="field-json" data-json="{}"></td>'.format(addslashes.sub(r'&quot;', json.dumps(cell)))
+                            row += '<td class="field-json" data-json="{}"></td>'.format(addslashes.sub(r'&quot;', json_dumps(cell)))
 
                     table.append(row)
 

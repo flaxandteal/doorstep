@@ -19,8 +19,8 @@ except ImportError as e:
     pass
 
 name = 'ltldoorstep'
-version = '0.1'
-release = '0.1.2'
+version = '0.2'
+release = '0.2.1'
 setup(
     name='ltldoorstep',
     version=release,

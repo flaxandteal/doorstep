@@ -1,5 +1,14 @@
-from .report import Report, ReportItem
 import itertools
+from typing import Union
+from .report import Report, ReportItem
+from ..aspect import Aspect
+
+class TabularCellReportItem(ReportItem):
+    @property
+    def content(self):
+        if self.properties and '_content' in self.properties:
+            return self.properties['_content']
+        return super().content
 
 class TabularReport(Report):
 
@@ -10,6 +19,13 @@ class TabularReport(Report):
         sheet = issue.item.location['sheet'] if 'sheet' in issue.item.location else None
         table = issue.item.location['table'] if 'table' in issue.item.location else None
         return TabularReport.table_string_from_sheet_table(sheet, table)
+
+    @classmethod
+    def get_rich_item_class(cls, item):
+        if 'entity' in item and 'type' in item['entity'] and item['entity']['type'] == 'Cell':
+            return TabularCellReportItem
+
+        return ReportItem
 
     @staticmethod
     def table_string_from_sheet_table(sheet, table):
@@ -25,8 +41,11 @@ class TabularReport(Report):
 
         return table_string
 
-    def add_issue(self, log_level, code, message, row_number=None, column_number=None, row=None, error_data=None, at_top=False, sheet=None, table=None):
+    def add_issue(self, log_level, code, message, row_number=None, column_number=None, row=None, error_data=None,
+                  at_top=False, sheet=None, table=None, cell_content: Union[Aspect, str, None] = None):
         """This function will add an issue to the report and takes as parameters the processor, the log level, code, message"""
+
+        report_item_cls = ReportItem
 
         if row and self.properties['headers']:
             if isinstance(self.properties['headers'], dict):
@@ -57,16 +76,24 @@ class TabularReport(Report):
 
         context = None
         properties = None
+        definition = None
         if row_number:
             if column_number:
                 typ = 'Cell'
                 if row:
                     context_location = dict(location)
                     context_location['column'] = None
+                    report_item_cls = TabularCellReportItem
                     context = [ReportItem('Row', context_location, row, None)]
+                    if column_number < len(row):
+                        definition = row[headers[column_number]]
+                        if cell_content and cell_content != definition:
+                            properties = {
+                                '_content': cell_content
+                            }
             else:
                 typ = 'Row'
-                properties = row
+                definition = row
         else:
             if column_number:
                 typ = 'Column'
@@ -77,6 +104,6 @@ class TabularReport(Report):
             else:
                 typ = 'Global'
 
-        item = ReportItem(typ, location, properties, None)
+        item = report_item_cls(typ, location, definition, properties)
 
         super(TabularReport, self).add_issue(log_level, code, message, item, error_data=error_data, context=context, at_top=at_top)
