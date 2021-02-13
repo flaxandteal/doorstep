@@ -38,6 +38,17 @@ wheel:
       - dist/
     expire_in: 1 day
 
+pypi:
+  stage: release
+  image: python:3.8
+  script:
+    - pip install twine
+    - "pip install -r requirements.txt --only-binary :all:"
+    - python3 setup.py sdist
+    - twine upload --repository-url $PYPI_SERVER --username $PYPI_USERNAME --password $PYPI_PASSWORD dist/*.whl
+  dependencies:
+   - wheel
+
 test:
   stage: test
   image: python:3.8
@@ -70,7 +81,7 @@ release:
 
 # WARNING: Prefer using --context=$CI_PROJECT_ID else concurrent builds may fail.
 deploy_dev:
-  image: google/cloud-sdk:162.0.0
+  image: google/cloud-sdk:300.0.0
   before_script:
   # In gitlab operation -> kubernetes needs to be setup for this to work so you get the KUBE variables
   - kubectl config set-cluster "$CI_PROJECT_ID" --server="$KUBE_URL" --certificate-authority="$KUBE_CA_PEM_FILE"
