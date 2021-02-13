@@ -28,11 +28,24 @@ build:
   - docker build -f Dockerfile -t $CONTAINER_IMAGE .
   - docker push $CONTAINER_IMAGE
 
+wheel:
+  stage: build
+  image: python:3.8-alpine
+  script:
+    - python3 setup.py bdist_wheel
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 day
+
 test:
   stage: test
+  image: python:3.8-alpine
   script:
-  - docker run --entrypoint python3 $CONTAINER_IMAGE setup.py test
-  dependencies: []
+   - pip3 install dist/*.whl
+   - python3 setup.py test
+  dependencies:
+   - wheel
 
 release:
   stage: release
