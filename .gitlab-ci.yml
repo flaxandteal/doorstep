@@ -30,6 +30,7 @@ wheel:
   stage: build
   image: python:3.8
   script:
+    - pip install ckanapi
     - "pip install -r requirements.txt --only-binary :all:"
     - python3 setup.py bdist_wheel
   artifacts:
