@@ -28,7 +28,7 @@ build:
 
 wheel:
   stage: build
-  image: python:3.8-alpine
+  image: python:3.8
   script:
     - "pip install -r requirements.txt --only-binary :all:"
     - python3 setup.py bdist_wheel
@@ -39,7 +39,7 @@ wheel:
 
 test:
   stage: test
-  image: python:3.8-alpine
+  image: python:3.8
   script:
    - pip3 install dist/*.whl
    - python3 setup.py test
