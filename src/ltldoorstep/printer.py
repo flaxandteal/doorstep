@@ -382,7 +382,6 @@ class HtmlPrinter(Printer):
                 item = issue.get_item()
                 context = issue.get_context()
                 content = item.content
-                print(content)
                 if isinstance(content, AnnotatedTextAspect):
                     content = ann_text_ptr.get_output(content)
 
