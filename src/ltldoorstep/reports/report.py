@@ -80,7 +80,6 @@ class ReportItem:
     # DO NOT OVERRIDE
     def render(self):
         definition = self.definition
-        print(definition)
         if hasattr(definition, '__serialize__'):
             definition = self.definition.__serialize__()
 
