@@ -20,7 +20,7 @@ except ImportError as e:
 
 name = 'ltldoorstep'
 version = '0.3'
-release = '0.3.1'
+release = '0.3.2'
 setup(
     name='ltldoorstep',
     version=release,
@@ -50,10 +50,11 @@ setup(
         'colorama',
         'dask',
         'distributed',
+        'chardet',
+        'unidecode',
         'tabulate',
         'flask>1.0',
         'flask_restful',
-        'pypachy',
         'pandas',
         'boto3',
         'autobahn',
