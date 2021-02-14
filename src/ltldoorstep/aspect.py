@@ -96,7 +96,7 @@ class AnnotatedTextAspect(Aspect):
                         "endOffset": self._end_offset      # character offset within end element
                     }
                 ],
-                "tags": list(self._tags)
+                "tags": sorted(self._tags, reverse=True)
             }
 
     def __init__(self, *args, **kwargs):

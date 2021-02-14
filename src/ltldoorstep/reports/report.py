@@ -79,11 +79,16 @@ class ReportItem:
 
     # DO NOT OVERRIDE
     def render(self):
+        definition = self.definition
+        print(definition)
+        if hasattr(definition, '__serialize__'):
+            definition = self.definition.__serialize__()
+
         return {
             'entity': {
                 'type': self.type,
                 'location': self.location,
-                'definition': self.definition
+                'definition': definition
             },
             'properties': {
                 k: v.__serialize__() if hasattr(v, '__serialize__') else v
