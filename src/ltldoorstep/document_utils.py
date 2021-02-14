@@ -14,7 +14,6 @@ def split_into_paragraphs(text):
         paragraph = remaining_text[:remaining_text.find('\n\n')]
         paragraphs.append((paragraph, line_counter))
         line_counter += paragraph.count('\n')
-        print(line_counter)
         remaining_text = remaining_text[len(paragraph) + 2:]
         line_counter += 2
     if remaining_text:

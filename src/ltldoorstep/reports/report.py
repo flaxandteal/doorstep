@@ -67,10 +67,17 @@ class ReportItem:
                 if isinstance(value, object):
                     properties[prop] = get_aspect_class(value['_aspect']).parse(value)
         if data['entity']:
+            if 'definition' in data['entity']:
+                definition = data['entity']['definition']
+                if definition and isinstance(definition, dict) and '_aspect' in definition:
+                    definition = get_aspect_class(definition['_aspect']).parse(definition)
+            else:
+                definition = None
+
             return cls(
                 typ=data['entity']['type'] if data['entity'] else None,
                 location=data['entity']['location'] if data['entity'] else None,
-                definition=data['entity']['definition'] if data['entity'] else None,
+                definition=definition,
                 properties=properties
             )
         else:
