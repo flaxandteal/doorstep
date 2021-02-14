@@ -41,6 +41,7 @@ wheel:
 pypi:
   stage: release
   image: python:3.8
+  when: manual
   script:
     - pip install twine
     - pip install ckanapi
