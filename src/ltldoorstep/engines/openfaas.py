@@ -207,7 +207,11 @@ class OpenFaaSEngine(Engine):
             )
 
         if 'error' in content and content['error']:
-            exception = json.loads(content['exception'])
+            try:
+                exception = json.loads(content['exception'])
+            except TypeError:
+                exception = content['exception']
+
             if 'code' in exception:
                 status_code = exception['code']
             else:
