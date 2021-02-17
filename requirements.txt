@@ -1,4 +1,4 @@
-Click<7.0
+Click>=7.0
 janus
 colorama
 dask
@@ -17,4 +17,4 @@ aiodocker
 aiohttp
 docker
 unidecode
-chardet
+chardet<4.0

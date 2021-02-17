@@ -20,7 +20,7 @@ except ImportError as e:
 
 name = 'ltldoorstep'
 version = '0.3'
-release = '0.3.3'
+release = '0.3.4'
 setup(
     name='ltldoorstep',
     version=release,
@@ -45,12 +45,12 @@ setup(
         'sphinx-commands': ['sphinx']
     },
     install_requires=[
-        'Click<7.0',
+        'Click>=7.0',
         'janus',
         'colorama',
         'dask',
         'distributed',
-        'chardet',
+        'chardet<4.0',
         'unidecode',
         'tabulate',
         'flask>1.0',

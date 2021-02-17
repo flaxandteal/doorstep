@@ -56,7 +56,7 @@ def cli(ctx, debug, bucket, output, output_file):
     }
 
 @cli.command(name='engine-info')
-@click.argument('engine', 'engine to get information about', required=False)
+@click.argument('engine', required=False)
 @click.pass_context
 def engine_info(ctx, engine=None):
     if engine:
@@ -103,8 +103,8 @@ def status(ctx, engine):
 
 
 @cli.command()
-@click.argument('filename', 'data file to process')
-@click.argument('workflow', 'Python workflow module')
+@click.argument('filename') # 'data file to process'
+@click.argument('workflow') # 'Python workflow module'
 @click.option('-e', '--engine', required=True)
 @click.option('-C', '--context', default=None)
 @click.option('-a', '--artifact', default=None)
