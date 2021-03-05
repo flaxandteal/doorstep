@@ -133,9 +133,15 @@ class CsvPrinter(Printer):
                 item.location['index'] if 'index' in item.location else None
             ]
             location_casts = ['Int64']
+        elif report.preset == 'document':
+            location_headings = ['Line']
+            location = lambda item: [
+                item.location['from']['line'] if 'from' in item.location else None
+            ]
+            location_casts = ['Int64']
         else:
             location_headings = ['Location']
-            location = lambda item: str(item.location)
+            location = lambda item: [str(item.location)]
             location_casts = [str]
 
         headings = location_headings + [
