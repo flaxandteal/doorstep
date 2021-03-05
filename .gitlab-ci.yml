@@ -48,6 +48,8 @@ pypi:
     - "pip install -r requirements.txt --only-binary :all:"
     - python3 setup.py sdist
     - twine upload --repository-url $PYPI_SERVER --username $PYPI_USERNAME --password $PYPI_PASSWORD dist/*.whl
+  only:
+   - master
   dependencies:
    - wheel
 
