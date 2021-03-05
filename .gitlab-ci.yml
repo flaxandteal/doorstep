@@ -48,6 +48,8 @@ pypi:
     - "pip install -r requirements.txt --only-binary :all:"
     - python3 setup.py sdist
     - twine upload --repository-url $PYPI_SERVER --username $PYPI_USERNAME --password $PYPI_PASSWORD dist/*.whl
+  only:
+   - master
   dependencies:
    - wheel
 
@@ -82,7 +84,7 @@ release:
   dependencies: []
 
 # WARNING: Prefer using --context=$CI_PROJECT_ID else concurrent builds may fail.
-deploy_dev:
+.deploy: &deploy
   image: google/cloud-sdk:300.0.0
   before_script:
   # In gitlab operation -> kubernetes needs to be setup for this to work so you get the KUBE variables
@@ -93,10 +95,12 @@ deploy_dev:
   stage: deploy
   script:
   - kubectl set image deployment/$CI_ENVIRONMENT_SLUG-lintol-doorstep lintol-doorstep=$CONTAINER_IMAGE
+  dependencies: []
+
+deploy_development:
+  <<: *deploy
   environment:
     name: ltl-doorstep-dev
     url: http://$CI_ENVIRONMENT_SLUG.$CI_TARGET_DOMAIN
   only:
-  - master
-  - preview
-  dependencies: []
+  - development

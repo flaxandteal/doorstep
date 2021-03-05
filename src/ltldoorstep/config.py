@@ -8,10 +8,10 @@ import yaml
 
 try:
     from minio import Minio
-    from minio.error import ResponseError as MinioResponseError
+    from minio.error import MinioException
 except ImportError:
     Minio = None
-    MinioResponseError = RuntimeError
+    MinioException = RuntimeError
 
 _config = {}
 _active_config = {}
@@ -83,7 +83,7 @@ def load_from_minio(prefix, location):
         with open(path, 'wb') as f:
             for d in data_object.stream(32*1024):
                 f.write(d)
-    except MinioResponseError as err:
+    except MinioException as err:
         raise err
 
     return path

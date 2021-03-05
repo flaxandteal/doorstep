@@ -103,6 +103,20 @@ def status(ctx, engine):
 
 
 @cli.command()
+@click.argument('filename') # 'report to read'
+@click.pass_context
+def render(ctx, filename):
+    printer = ctx.obj['printer']
+    config = ctx.obj['config']
+
+    with open(filename, 'r') as report_file:
+        result = json.load(report_file)
+
+    printer.build_report(result)
+
+    printer.print_output()
+
+@cli.command()
 @click.argument('filename') # 'data file to process'
 @click.argument('workflow') # 'Python workflow module'
 @click.option('-e', '--engine', required=True)
