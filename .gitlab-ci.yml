@@ -38,6 +38,21 @@ wheel:
       - dist/
     expire_in: 1 day
 
+pypi for development:
+  stage: release
+  image: python:3.8
+  when: manual
+  script:
+    - pip install twine
+    - pip install ckanapi
+    - "pip install -r requirements.txt --only-binary :all:"
+    - python3 setup.py sdist
+    - TWINE_PASSWORD=${CI_JOB_TOKEN} TWINE_USERNAME=gitlab-ci-token python -m twine upload --repository-url https://gitlab.com/api/v4/projects/${CI_PROJECT_ID}/packages/pypi dist/*.whl
+  only:
+   - development
+  dependencies:
+   - wheel
+
 pypi:
   stage: release
   image: python:3.8
