@@ -18,3 +18,4 @@ aiohttp<4.0
 docker
 unidecode
 chardet<4.0
+jsonpath-ng
