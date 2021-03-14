@@ -64,6 +64,7 @@ setup(
         'retry',
         'minio',
         'aiohttp',
+        'jsonpath-ng',
         'aiodocker'
     ],
     include_package_data=True,
