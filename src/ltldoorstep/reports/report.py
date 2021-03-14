@@ -547,8 +547,9 @@ def combine_reports(*reports, base=None):
 from .geojson import GeoJSONReport
 from .tabular import TabularReport
 from .document import DocumentReport
+from .tree import TreeReport
 
 _report_class_from_preset = {
     cls.get_preset(): cls for cls in
-    (GeoJSONReport, TabularReport, DocumentReport)
+    (GeoJSONReport, TabularReport, DocumentReport, TreeReport)
 }
