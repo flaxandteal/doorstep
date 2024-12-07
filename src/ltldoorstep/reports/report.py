@@ -8,7 +8,7 @@ import os
 from ..context import DoorstepContext
 from ..encoders import Serializable, json_dumps
 from ..artifact import ArtifactRecord, ArtifactType
-from ..aspect import get_aspect_class
+from ..aspect import get_aspect_class, Aspect
 
 # Delta allows us to avoid adding totals together and
 # double-counting existing, kept, rows
@@ -64,7 +64,7 @@ class ReportItem:
         properties = data['properties']
         if properties:
             for prop, value in properties.items():
-                if isinstance(value, object):
+                if isinstance(value, Aspect):
                     properties[prop] = get_aspect_class(value['_aspect']).parse(value)
         if data['entity']:
             if 'definition' in data['entity']:

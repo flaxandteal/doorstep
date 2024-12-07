@@ -93,7 +93,13 @@ def load_reference_data(location):
     global _active_config
     config = _active_config
 
-    path = location
+    if not os.path.isabs(location):
+        cwd = os.path.abspath(os.getcwd())
+        path = os.path.abspath(os.path.join(cwd, location))
+        if not path.startswith(cwd):
+            raise RuntimeError(
+                f"Reference data lives outside current working directory, so must be in config: {path}"
+            )
 
     if 'reference-data' in config:
         if 'storage' in config['reference-data'] and config['reference-data']['storage'] == 'minio':
