@@ -1,4 +1,4 @@
-import werkzeug
+from werkzeug.datastructures import FileStorage
 import threading
 import concurrent
 import uuid
@@ -27,10 +27,10 @@ class Processor(Resource):
     def post(self):
         asyncio.set_event_loop(app.loop)
         parse = reqparse.RequestParser()
-        parse.add_argument('_session', type=str)
-        parse.add_argument('script', type=werkzeug.FileStorage, location='files', action='append')
-        parse.add_argument('module', type=str, action='append')
-        parse.add_argument('ini')
+        parse.add_argument('_session', type=str, location='form')
+        parse.add_argument('script', type=FileStorage, location='files', action='append')
+        parse.add_argument('module', type=str, action='append', location='form')
+        parse.add_argument('ini', location='form')
         args = parse.parse_args()
 
         modules = {}
@@ -70,9 +70,9 @@ class Data(Resource):
     def post(self):
         asyncio.set_event_loop(app.loop)
         parse = reqparse.RequestParser()
-        parse.add_argument('_session', type=str)
-        parse.add_argument('content', type=werkzeug.FileStorage, location='files')
-        parse.add_argument('redirect', type=bool)
+        parse.add_argument('_session', type=str, location='form')
+        parse.add_argument('content', type=FileStorage, location='files')
+        parse.add_argument('redirect', type=bool, location='form')
         args = parse.parse_args()
 
         content = args['content'].read()
@@ -96,7 +96,7 @@ class Report(Resource):
         fut = concurrent.futures.Future()
 
         parse = reqparse.RequestParser()
-        parse.add_argument('_session', type=str)
+        parse.add_argument('_session', type=str, location='args')
         args = parse.parse_args()
 
         session_id = args['_session']

@@ -1,5 +1,5 @@
 /env
-/.env
+/.env*
 *.egg-info
 /.eggs
 __pycache__
