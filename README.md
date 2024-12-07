@@ -25,9 +25,21 @@ From the project root directory.
 
     python3 -m pytest tests
 
+## Experimenting with HTTP mode
+
+Start the `doorstep` server:
+
+    ltldoorstep serve --engine dask.threaded --protocol http
+
+The following `curl` command, run in the root of the `doorstep-examples` folder runs the boundary-checker against some sample data.
+
+    SESSION=$(curl -s -q -X POST -H "Content-Type: multipart/form-data" -F "module=lintol/boundary-checker/processor.py" -F 'ini={"definitions": {"boundary-checker": {"module": "boundary-checker", "settings": {"boundary": "$->ni"}, "supplementary": {"ni": {"location": "tests/data/osni-ni-outline-lowres.geojson", "source": "OSNI"}}}}};type=application/json' http://localhost:5000/processor | jq -r '._session'); echo $SESSION; curl -i -X POST -H "Content-Type: multipart/form-data" -F "_session=$SESSION" -F "content=@tests/data/protected_wrecks.geojson;type=application/geojson;filename=protected_wrecks.geojson" http://localhost:5000/data; (curl "http://localhost:5000/report?_session=$SESSION" | jq)
+
 ## Example Processors
 
     A processor is a function that runs a specific check or validation against data. Several examples are included within the doorstep repository, in the `ltldoorstep_examples` module - these are:
+
+Check out the `lintol/doorstep-examples` repository for examples.
 
 ### Boundary Checker
 
