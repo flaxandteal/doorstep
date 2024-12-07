@@ -170,5 +170,5 @@ class DaskThreadedEngine(Engine):
             'data': data_name,
             'queue': Queue()
         }
-        logging.warn("Yeilding session - %s " % session)
+        logging.warn("Yielding session - %s " % session)
         yield session
