@@ -2,7 +2,7 @@ import json
 import logging
 
 class DoorstepContext:
-    def __init__(self, lang=None, tag=None, module=None, docker_image=None, docker_revision=None, context_package=None, settings={}, configuration={}, supplementary=None, context_format=None, context_resource=None):
+    def __init__(self, lang=None, tag=None, module=None, docker_image=None, docker_revision=None, context_package=None, settings=None, configuration=None, supplementary=None, context_format=None, context_resource=None):
         self.lang = lang
         self.docker = {
             'image': docker_image,
@@ -12,8 +12,8 @@ class DoorstepContext:
         self.module = module
         self.package = context_package
         self.resource = context_resource
-        self.settings = settings
-        self.configuration = configuration
+        self.settings = settings or {}
+        self.configuration = configuration or {}
         self.supplementary = supplementary
         self.context_format = context_format
 
